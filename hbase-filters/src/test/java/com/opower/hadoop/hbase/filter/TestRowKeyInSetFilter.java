@@ -13,7 +13,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -44,7 +46,21 @@ public class TestRowKeyInSetFilter {
             this.inSet.add(key);
             bloomFilter.add(Bytes.toBytesBinary(key));
         }
-        this.mainFilter = new RowKeyInSetFilter(bloomFilter);
+        // mimic the operations that the filter goes through in the real
+        // lifecycle, which starts with a serialization before being
+        // sent to the server for the real work to occur
+        Filter filter = new RowKeyInSetFilter(bloomFilter);
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(byteStream);
+        filter.write(out);
+        out.flush();
+        out.close();
+        byte[] filterBytes = byteStream.toByteArray();
+
+        // Reconstruct it before running it through the tests
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(filterBytes));
+        this.mainFilter = new RowKeyInSetFilter();
+        this.mainFilter.readFields(in);
     }
 
     @Test
@@ -58,22 +74,10 @@ public class TestRowKeyInSetFilter {
     }
 
     @Test
-    public void testSerialization() throws Exception {
-        // Serialize mainFilter to bytes
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(byteStream);
-        mainFilter.write(out);
-        out.flush();
-        out.close();
-        byte[] filterBytes = byteStream.toByteArray();
-
-        // Reconstruct it and run it through the tests
-        DataInputStream in = new DataInputStream(new ByteArrayInputStream(filterBytes));
-        Filter newFilter = new RowKeyInSetFilter();
-        newFilter.readFields(in);
-
-        runRowsInSetTest(newFilter);
-        runRowsNotInSetTest(newFilter);
+    public void testMixOfRowsInAndNotInSet() {
+        runRowsNotInSetTest(this.mainFilter);
+        runRowsInSetTest(this.mainFilter);
+        runRowsNotInSetTest(this.mainFilter);
     }
 
     private void runRowsInSetTest(Filter filter) {
@@ -89,16 +93,22 @@ public class TestRowKeyInSetFilter {
 
     private void runFilterLifecycle(Filter filter, byte[] rowKey, boolean inSet) {
         KeyValue keyValue = new KeyValue(rowKey, null, null);
+        List<KeyValue> keyValues = Arrays.<KeyValue>asList(keyValue);
 
         filter.reset();
         assertFalse(filter.filterAllRemaining());
         if (inSet) {
             assertFalse(filter.filterRowKey(rowKey, 0, rowKey.length));
             assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(keyValue));
+            filter.filterRow(keyValues);
             assertFalse(filter.filterRow());
         }
         else {
             assertTrue(filter.filterRowKey(rowKey, 0, rowKey.length));
+            assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterKeyValue(keyValue));
+            filter.filterRow(keyValues);
+            assertTrue(filter.filterRow());
         }
+        assertFalse(filter.filterAllRemaining());
     }
 }

@@ -1,14 +1,16 @@
 package com.opower.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Hash;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collection;
 
 /**
  * An HBase filter that checks for the existence of a row key in a set, giving
@@ -27,6 +29,9 @@ public class RowKeyInSetFilter extends FilterBase {
     private ByteBloomFilter bloomFilter;
     private ByteBuffer bloomBits;
 
+    // Transient field to track progress through the filter lifecycle
+    private boolean rowInSet = false;
+
     /**
      * Default constructor needed for serialization; use
      * {@link RowKeyInSetFilter(ByteBloomFilter)} when you want to create
@@ -34,18 +39,48 @@ public class RowKeyInSetFilter extends FilterBase {
      */
     public RowKeyInSetFilter() {}
 
-    public RowKeyInSetFilter(ByteBloomFilter bloomFilter) throws IOException {
+    public RowKeyInSetFilter(ByteBloomFilter bloomFilter) {
         this.bloomFilter = bloomFilter;
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(byteStream);
-        this.bloomFilter.writeBloom(out);
-        out.flush();
-        out.close();
-        this.bloomBits = ByteBuffer.wrap(byteStream.toByteArray());
+        // We do not need to populate the bloomBits field, because it is only
+        // used after the filter has been serialized, sent to the server,
+        // and deserialized.  So we pull that data out at deserialization
+        // time.
+        outputStats("RowKeyInSetFilter(ByteBloomFilter)",
+                this.bloomFilter, this.bloomBits);
+    }
+
+    public RowKeyInSetFilter(Collection<String> rowKeys) {
+        int size = rowKeys.size();
+        this.bloomFilter =
+            new ByteBloomFilter(size, 0.0001f, Hash.JENKINS_HASH, 10);
+        this.bloomFilter.allocBloom();
+        for (String rowKey : rowKeys) {
+            this.bloomFilter.add(Bytes.toBytes(rowKey));
+        }
+        outputStats("RowKeyInSetFilter(Collection<String>)",
+                this.bloomFilter, this.bloomBits);
+    }
+
+    @Override
+    public void reset() {
+        this.rowInSet = false;
+    }
+
+    @Override
+    public ReturnCode filterKeyValue(KeyValue v) {
+        if (!this.rowInSet) {
+            return ReturnCode.NEXT_ROW;
+        }
+        return ReturnCode.INCLUDE;
+    }
+
+    @Override
+    public boolean filterRow() {
+        return !this.rowInSet;
     }
 
     /**
-     * Filters our rows that are definitively not in the set.
+     * Filters out rows that are definitively not in the set.
      *
      * @inheritDoc
      */
@@ -54,10 +89,13 @@ public class RowKeyInSetFilter extends FilterBase {
         // If the row is found in the set, then return false to continue
         if (this.bloomFilter.contains(
                     rowKeyBuffer, offset, length, this.bloomBits)) {
-            return false;
+            this.rowInSet = true;
         }
-        // Otherwise, we can skip the rest of processing for the row
-        return true;
+        else {
+            // Otherwise, we can skip the rest of processing for the row
+            this.rowInSet = false;
+        }
+        return !rowInSet;
     }
 
     public void write(DataOutput out) throws IOException {
@@ -82,5 +120,21 @@ public class RowKeyInSetFilter extends FilterBase {
         // allocate the buffer to make sure we can actually use it
         this.bloomFilter.allocBloom();
         this.bloomBits = ByteBuffer.wrap(rawBloom);
+
+        outputStats("After readFields", this.bloomFilter, this.bloomBits);
+    }
+
+    private static void outputStats(String msg, ByteBloomFilter filter,
+            ByteBuffer bits) {
+        if (msg != null) {
+            System.out.println(msg);
+        }
+        System.out.printf("%12s: %10d%n%12s: %10d%n%12s: %10d%n",
+                "Byte size", filter.getByteSize(),
+                "Key count", filter.getKeyCount(),
+                "Max keys", filter.getMaxKeys());
+        if (bits != null) {
+            System.out.printf("%12s: %10d%n", "Capacity", bits.capacity());
+        }
     }
 }
