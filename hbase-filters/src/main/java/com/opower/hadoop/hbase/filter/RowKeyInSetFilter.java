@@ -1,5 +1,8 @@
 package com.opower.hadoop.hbase.filter;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
@@ -25,6 +28,7 @@ import java.util.Collection;
  * @author jeff@opower.com
  */
 public class RowKeyInSetFilter extends FilterBase {
+    private static final Log LOG = LogFactory.getLog(RowKeyInSetFilter.class);
 
     private ByteBloomFilter bloomFilter;
     private ByteBuffer bloomBits;
@@ -45,8 +49,7 @@ public class RowKeyInSetFilter extends FilterBase {
         // used after the filter has been serialized, sent to the server,
         // and deserialized.  So we pull that data out at deserialization
         // time.
-        outputStats("RowKeyInSetFilter(ByteBloomFilter)",
-                this.bloomFilter, this.bloomBits);
+        outputStats(this.bloomFilter);
     }
 
     public RowKeyInSetFilter(Collection<String> rowKeys) {
@@ -57,8 +60,7 @@ public class RowKeyInSetFilter extends FilterBase {
         for (String rowKey : rowKeys) {
             this.bloomFilter.add(Bytes.toBytes(rowKey));
         }
-        outputStats("RowKeyInSetFilter(Collection<String>)",
-                this.bloomFilter, this.bloomBits);
+        outputStats(this.bloomFilter);
     }
 
     @Override
@@ -121,20 +123,15 @@ public class RowKeyInSetFilter extends FilterBase {
         this.bloomFilter.allocBloom();
         this.bloomBits = ByteBuffer.wrap(rawBloom);
 
-        outputStats("After readFields", this.bloomFilter, this.bloomBits);
+        outputStats(this.bloomFilter);
     }
 
-    private static void outputStats(String msg, ByteBloomFilter filter,
-            ByteBuffer bits) {
-        if (msg != null) {
-            System.out.println(msg);
-        }
-        System.out.printf("%12s: %10d%n%12s: %10d%n%12s: %10d%n",
-                "Byte size", filter.getByteSize(),
-                "Key count", filter.getKeyCount(),
-                "Max keys", filter.getMaxKeys());
-        if (bits != null) {
-            System.out.printf("%12s: %10d%n", "Capacity", bits.capacity());
+    private static void outputStats(ByteBloomFilter filter) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("%s: %d; %s: %d; %s: %d",
+                        "Byte size", filter.getByteSize(),
+                        "Key count", filter.getKeyCount(),
+                        "Max keys", filter.getMaxKeys()));
         }
     }
 }
