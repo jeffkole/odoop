@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+    <id>bin</id>
+
+    <formats>
+        <format>jar</format>
+    </formats>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <dependencySets>
+        <dependencySet>
+            <useProjectArtifact>false</useProjectArtifact>
+            <outputDirectory></outputDirectory>
+            <unpack>true</unpack>
+            <!--
+                 Only include com.opower dependencies, as all others
+                 must be provided in the cluster already.
+            -->
+            <includes>
+                <include>com.opower:*</include>
+            </includes>
+        </dependencySet>
+    </dependencySets>
+
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.outputDirectory}</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>com/opower/hadoop/hbase/filter/DeployedFilter*.class</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+
+</assembly>
