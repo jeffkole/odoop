@@ -38,6 +38,8 @@ public class DeployedFilterManager {
 
     private static final Log LOG = LogFactory.getLog(DeployedFilterManager.class);
     private static final Random RANDOM = new Random();
+    private static final DeployedFilterMetrics METRICS =
+        new DeployedFilterMetrics();
 
     private final Configuration configuration;
 
@@ -135,6 +137,7 @@ public class DeployedFilterManager {
             // does it need to be serialized from the DeployedFilter?
             ClassLoader filterLoader =
                 new HdfsClassLoader(new Configuration(), jarPath);
+            METRICS.classLoaderInstantiated(filterLoader);
             Class<?> filterClass =
                 Class.forName(filterClassName, true, filterLoader);
             if (LOG.isDebugEnabled()) {
@@ -154,6 +157,10 @@ public class DeployedFilterManager {
                     filterClass.getClassLoader(),
                     filterLoader));
             }
+            else {
+                METRICS.filterDynamicallyLoaded(filterClass);
+            }
+            METRICS.filterInstantiated(filterClass);
             return (Filter)filterClass.newInstance();
         }
         catch (Exception e) {
