@@ -38,7 +38,7 @@ public class RowKeyInSetFilter extends FilterBase {
 
     /**
      * Default constructor needed for serialization; use
-     * {@link RowKeyInSetFilter(ByteBloomFilter)} when you want to create
+     * {@link #RowKeyInSetFilter(ByteBloomFilter)} when you want to create
      * a RowKeyInSetFilter for real
      */
     public RowKeyInSetFilter() {}
