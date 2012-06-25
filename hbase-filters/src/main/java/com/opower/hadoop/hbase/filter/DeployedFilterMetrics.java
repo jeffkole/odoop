@@ -19,6 +19,8 @@ import java.util.Set;
 
 /**
  * Collects and emits metrics for the use of the {@link DeployedFilter}.
+ * Metrics are added to the "extensions" context under the record named
+ * "deployedFilter".
  *
  * @author jeff@opower.com
  */
@@ -55,7 +57,7 @@ class DeployedFilterMetrics implements Updater {
     private final Set<Reference> filterClasses = new HashSet<Reference>();
 
     DeployedFilterMetrics() {
-        MetricsContext context = MetricsUtil.getContext("deployedFilter");
+        MetricsContext context = MetricsUtil.getContext("extensions");
         metricsRecord = MetricsUtil.createRecord(context, "deployedFilter");
         context.registerUpdater(this);
     }
@@ -95,7 +97,6 @@ class DeployedFilterMetrics implements Updater {
 
     public synchronized void doUpdates(MetricsContext caller) {
         synchronized (this) {
-            System.gc();
             // Determine how many classes and class loaders have been
             // collected and add those counts to the respective metrics
             incrementCollectedMetrics(this.classLoaders,
