@@ -1,6 +1,7 @@
 package com.opower.hadoop.hbase.filter.example;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.WritableUtils;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -9,15 +10,22 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.opower.hadoop.hbase.filter.DeployedFilter;
 import com.opower.hadoop.hbase.filter.DeployedFilterManager;
-import com.opower.hadoop.hbase.filter.RowKeyInSetFilter;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Shows how one could use a {@link DeployedFilter}.
@@ -39,7 +47,7 @@ public final class DeployedFilterExample {
         String tableName = argList.get(0);
         argList.remove(0);
 
-        RowKeyInSetFilter wrappedFilter = new RowKeyInSetFilter(argList);
+        SpecificRowKeyFilter wrappedFilter = new SpecificRowKeyFilter(argList);
         // DeployedFilterManager will push the jar containing the
         // wrappedFilter to the cluster so that it can be used on the
         // region servers when the DeployedFilter is deserialized.
@@ -67,6 +75,72 @@ public final class DeployedFilterExample {
             // cleaned up
             filterManager.undeployFilter(filter);
             HConnectionManager.deleteConnection(configuration, true);
+        }
+    }
+
+    /**
+     * An example filter that will match on the row keys that are passed in as constructor parameters
+     *
+     * @author jeff@opower.com
+     */
+    public static class SpecificRowKeyFilter extends FilterBase {
+        private Set<String> keys;
+
+        // Transient field to track progress through the filter lifecycle
+        private boolean rowInSet = false;
+
+        public SpecificRowKeyFilter() {}
+
+        public SpecificRowKeyFilter(Collection<String> rowKeys) {
+            this.keys = new HashSet<String>();
+            this.keys.addAll(rowKeys);
+        }
+
+        @Override
+        public void reset() {
+            this.rowInSet = false;
+        }
+
+        @Override
+        public ReturnCode filterKeyValue(KeyValue v) {
+            if (!this.rowInSet) {
+                return ReturnCode.NEXT_ROW;
+            }
+            return ReturnCode.INCLUDE;
+        }
+
+        @Override
+        public boolean filterRow() {
+            return !this.rowInSet;
+        }
+
+        @Override
+        public boolean filterRowKey(byte[] rowKeyBuffer, int offset, int length) {
+            String key = Bytes.toString(rowKeyBuffer, offset, length);
+            // If the row is found in the set, then return false to continue
+            if (this.keys.contains(key)) {
+                this.rowInSet = true;
+            }
+            else {
+                // Otherwise, we can skip the rest of processing for the row
+                this.rowInSet = false;
+            }
+            return !rowInSet;
+        }
+
+        public void write(DataOutput out) throws IOException {
+            out.writeInt(this.keys.size());
+            for (String key : keys) {
+                WritableUtils.writeString(out, key);
+            }
+        }
+
+        public void readFields(DataInput in) throws IOException {
+            int numKeys = in.readInt();
+            this.keys = new HashSet<String>();
+            for (int i = 0; i < numKeys; i++) {
+                this.keys.add(WritableUtils.readString(in));
+            }
         }
     }
 }
