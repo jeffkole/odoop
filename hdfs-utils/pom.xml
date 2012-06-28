@@ -11,7 +11,8 @@
 
     <artifactId>hdfs-utils</artifactId>
     <packaging>jar</packaging>
-    <name>Utilities for dealing with HDFS</name>
+    <name>HDFS Utilities</name>
+    <description>Utilities for dealing with HDFS</description>
 
     <dependencies>
         <dependency>
