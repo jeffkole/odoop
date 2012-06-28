@@ -15,6 +15,7 @@ import java.net.URLDecoder;
 import java.util.Enumeration;
 import java.util.Random;
 
+import com.opower.common.reflect.Reflection;
 import com.opower.hadoop.fs.HdfsClassLoader;
 
 /**
@@ -68,6 +69,10 @@ public class DeployedFilterManager {
      */
     public DeployedFilter deployFilter(Filter wrappedFilter)
         throws IOException {
+        if (wrappedFilter == null) {
+            throw new IllegalArgumentException("Filter must not be null");
+        }
+        Reflection.checkDeserializable(wrappedFilter);
         String filterJarUri = findContainingJar(wrappedFilter.getClass());
         if (filterJarUri == null) {
             throw new IllegalArgumentException(String.format(

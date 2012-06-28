@@ -9,6 +9,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import com.opower.common.reflect.Reflection;
+
 /**
  * Adapts a {@link Selector} to fit the contract of a {@link Filter}.  When you want to use a {@link Selector} simply
  * instantiate a {@link SelectorFilter} to wrap it up and set it on a {@link Scan} or {@link Get}.
@@ -30,6 +32,10 @@ public class SelectorFilter extends FilterBase {
      * @param selector an instance of a publicly accessible {@Selector}
      */
     public SelectorFilter(Selector selector) {
+        if (selector == null) {
+            throw new IllegalArgumentException("Selector must not be null");
+        }
+        Reflection.checkDeserializable(selector);
         this.selector = selector;
     }
 
