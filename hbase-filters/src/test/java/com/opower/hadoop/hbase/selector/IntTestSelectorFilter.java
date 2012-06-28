@@ -182,7 +182,7 @@ public class IntTestSelectorFilter {
     /**
      * Selects all rows
      */
-    private static class AllRowSelector extends AbstractStatelessSelector {
+    public static class AllRowSelector extends AbstractStatelessSelector {
         @Override
         public boolean includeRow(byte[] buffer, int offset, int length) {
             return true;
@@ -196,7 +196,7 @@ public class IntTestSelectorFilter {
     /**
      * Selects no rows
      */
-    private static class NoRowSelector extends AbstractStatelessSelector {
+    public static class NoRowSelector extends AbstractStatelessSelector {
         @Override
         public boolean includeRow(byte[] buffer, int offset, int length) {
             return false;
@@ -211,7 +211,7 @@ public class IntTestSelectorFilter {
     /**
      * Selects every other row, starting with the first, thus odd-numbered rows
      */
-    private static class OddRowSelector extends AbstractStatelessSelector {
+    public static class OddRowSelector extends AbstractStatelessSelector {
         private int rowCount = 0;
         @Override
         public boolean includeRow(byte[] buffer, int offset, int length) {
@@ -230,7 +230,7 @@ public class IntTestSelectorFilter {
     /**
      * Selects all rows, but only cells that match the specific qualifier
      */
-    private static class QualifierSelector implements Selector {
+    public static class QualifierSelector implements Selector {
         private byte[] qualifier;
 
         public QualifierSelector() {}

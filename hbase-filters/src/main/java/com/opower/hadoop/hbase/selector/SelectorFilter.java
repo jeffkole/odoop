@@ -1,9 +1,5 @@
 package com.opower.hadoop.hbase.selector;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -27,6 +23,12 @@ public class SelectorFilter extends FilterBase {
 
     public SelectorFilter() {}
 
+    /**
+     * Construct a {@Filter} that wraps a {@link Selector}.  The selector passed in must be of a publicly accessible
+     * class, otherwise deserialization on the server will not work.
+     *
+     * @param selector an instance of a publicly accessible {@Selector}
+     */
     public SelectorFilter(Selector selector) {
         this.selector = selector;
     }
@@ -61,18 +63,17 @@ public class SelectorFilter extends FilterBase {
     }
 
     public void readFields(DataInput in) throws IOException {
-        this.selector = (Selector)createForName(Bytes.toString(Bytes.readByteArray(in)));
-        this.selector.readFields(in);
-    }
-
-    private Writable createForName(String className) {
+        // Do not use WritableFactories.newInstance, because it uses ReflectionUtils which caches
+        // constructors, which in turn means these classes will never be garbage collected, which
+        // is pretty bad if you want them to be used in a deployed filter context.
+        String className = Bytes.toString(Bytes.readByteArray(in));
         try {
-            @SuppressWarnings("unchecked")
-            Class<? extends Writable> clazz = (Class<? extends Writable>)Class.forName(className);
-            return WritableFactories.newInstance(clazz, new Configuration());
+            Class selectorClass = Class.forName(className);
+            this.selector = (Selector)selectorClass.newInstance();
+            this.selector.readFields(in);
         }
-        catch (ClassNotFoundException e) {
-            throw new RuntimeException("Unable to find class " + className);
+        catch (Exception e) {
+            throw new IOException("Error instantiating class " + className, e);
         }
     }
 }
