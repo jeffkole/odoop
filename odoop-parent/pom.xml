@@ -21,7 +21,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- TODO: In our libs-hbase, we have a lot of exclusions. Do we need to exclude them here, too? -->
             <dependency>
                 <groupId>org.apache.hbase</groupId>
                 <artifactId>hbase</artifactId>

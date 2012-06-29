@@ -15,20 +15,17 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
 /**
- * A {@link java.lang.ClassLoader} that reads its class data from a jar
- * file stored in HDFS.
+ * A {@link java.lang.ClassLoader} that reads its class data from a jar file stored in HDFS.
  *
  * @author jeff@opower.com
  */
 public class HdfsClassLoader extends ClassLoader {
     /**
-     * A configuration option to indicate whether or not to skip the standard
-     * {@link ClassLoader} hierarchical search and look at the configured
-     * jar first.  Defaults to false so that the standard search is performed,
+     * A configuration option to indicate whether or not to skip the standard {@link ClassLoader} hierarchical
+     * search and look at the configured jar first.  Defaults to false so that the standard search is performed,
      * but it may be helpful to turn to true for debugging.
      */
-    public static final String ATTEMPT_LOCAL_LOAD_FIRST =
-        "hdfs.classloader.attemptLocalFirst";
+    public static final String ATTEMPT_LOCAL_LOAD_FIRST = "hdfs.classloader.attemptLocalFirst";
 
     private static final Log LOG = LogFactory.getLog(HdfsClassLoader.class);
 
@@ -46,8 +43,8 @@ public class HdfsClassLoader extends ClassLoader {
     }
 
     /**
-     * Override to allow for checking the local jar first instead of the
-     * standard search which would check the parent class loader first.
+     * Override to allow for checking the local jar first instead of the standard search which would check
+     * the parent class loader first.
      *
      * {@inheritDoc}
      */
@@ -76,8 +73,7 @@ public class HdfsClassLoader extends ClassLoader {
     public Class findClass(String className) throws ClassNotFoundException {
         String classPath = convertNameToPath(className);
         if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Searching for class %s (%s) in path %s",
-                        className, classPath, this.jar));
+            LOG.debug(String.format("Searching for class %s (%s) in path %s", className, classPath, this.jar));
         }
         FileSystem fs = null;
         JarInputStream jarIn = null;
@@ -87,37 +83,30 @@ public class HdfsClassLoader extends ClassLoader {
             JarEntry currentEntry = null;
             while ((currentEntry = jarIn.getNextJarEntry()) != null) {
                 if (LOG.isTraceEnabled()) {
-                    LOG.trace(String.format("Comparing %s to entry %s",
-                            classPath, currentEntry.getName()));
+                    LOG.trace(String.format("Comparing %s to entry %s", classPath, currentEntry.getName()));
                 }
                 if (currentEntry.getName().equals(classPath)) {
                     byte[] classBytes = readEntry(jarIn);
-                    return defineClass(className, classBytes,
-                            0, classBytes.length);
+                    return defineClass(className, classBytes, 0, classBytes.length);
                 }
             }
         }
         catch (IOException ioe) {
             throw new ClassNotFoundException(
-                    "Unable to find " + className + " in path " + this.jar,
-                    ioe);
+                    "Unable to find " + className + " in path " + this.jar, ioe);
         }
         finally {
             closeQuietly(jarIn);
-            // While you would think it would be prudent to close the
-            // filesystem that you opened, it turns out that this filesystem
-            // is shared with HBase, so when you close this one, it becomes
-            // closed for HBase, too.  Therefore, there is no call to
-            // closeQuietly(fs);
+            // While you would think it would be prudent to close the filesystem that you opened,
+            // it turns out that this filesystem is shared with HBase, so when you close this one,
+            // it becomes closed for HBase, too.  Therefore, there is no call to closeQuietly(fs);
         }
-        throw new ClassNotFoundException(
-                "Unable to find " + className + " in path " + this.jar);
+        throw new ClassNotFoundException("Unable to find " + className + " in path " + this.jar);
     }
 
     /**
-     * Converts a binary class name to the path that it would show up
-     * as in a jar file.  For example, java.lang.String would show up
-     * as a jar entry at java/lang/String.class
+     * Converts a binary class name to the path that it would show up as in a jar file.
+     * For example, java.lang.String would show up as a jar entry at java/lang/String.class
      */
     private String convertNameToPath(String className) {
         String classPath = className.replace('.', '/');

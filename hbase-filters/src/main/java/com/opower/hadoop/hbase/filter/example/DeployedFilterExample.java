@@ -37,12 +37,10 @@ public final class DeployedFilterExample {
 
     public static void main(String[] args) throws Exception {
         Configuration configuration = HBaseConfiguration.create();
-        DeployedFilterManager filterManager =
-            new DeployedFilterManager(configuration);
+        DeployedFilterManager filterManager = new DeployedFilterManager(configuration);
 
-        // Just some cheap and easy command-line parsing.  The first
-        // argument is the name of the table to use, and the rest are
-        // row keys to use for the RowKeyInSetFilter
+        // Just some cheap and easy command-line parsing.  The first argument is the name of the
+        // table to use, and the rest are row keys to use for the SpecificRowKeyFilter
         List<String> argList = new LinkedList<String>(Arrays.asList(args));
         String tableName = argList.get(0);
         argList.remove(0);

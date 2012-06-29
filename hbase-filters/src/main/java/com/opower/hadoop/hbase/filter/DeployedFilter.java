@@ -12,12 +12,10 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Acts as a wrapper around another {@link Filter} allowing for that filter
- * to be dynamically deployed into an HBase cluster.  All of the
- * {@link Filter} methods just delegate to the wrapped filter.  The
- * interesting work occurs during deserialization on the region server,
- * when the {@link DeployedFilterManager#loadFilter} method is called and
- * the wrapped filter is loaded dynamically.
+ * Acts as a wrapper around another {@link Filter} allowing for that filter to be dynamically deployed
+ * into an HBase cluster.  All of the {@link Filter} methods just delegate to the wrapped filter.  The
+ * interesting work occurs during deserialization on the region server, when the
+ * {@link DeployedFilterManager#loadFilter} method is called and the wrapped filter is loaded dynamically.
  *
  * @author jeff@opower.com
  */
@@ -34,8 +32,7 @@ public class DeployedFilter implements Filter {
     /**
      * Constructor meant to be used only by the {@link DeployedFilterManager}
      *
-     * @param remoteJarPath a Path to the jar in HDFS that holds the
-     *        class definition for the wrapped filter
+     * @param remoteJarPath a Path to the jar in HDFS that holds the class definition for the wrapped filter
      * @param wrappedFilter the {@link Filter} to be deployed
      */
     DeployedFilter(Path remoteJarPath, Filter wrappedFilter) {
@@ -45,8 +42,7 @@ public class DeployedFilter implements Filter {
     }
 
     /**
-     * Meant to be used by the {@link DeployedFilterManager} during the
-     * undeploying phase
+     * Meant to be used by the {@link DeployedFilterManager} during the undeploying phase
      *
      * @return the Path to the jar in HDFS
      */
@@ -95,9 +91,7 @@ public class DeployedFilter implements Filter {
     public void readFields(DataInput in) throws IOException {
         this.remoteJarPath = new Path(Bytes.toString(Bytes.readByteArray(in)));
         this.wrappedFilterName = Bytes.toString(Bytes.readByteArray(in));
-        this.wrappedFilter = DeployedFilterManager.loadFilter(
-                this.remoteJarPath,
-                this.wrappedFilterName);
+        this.wrappedFilter = DeployedFilterManager.loadFilter(this.remoteJarPath, this.wrappedFilterName);
         this.wrappedFilter.readFields(in);
     }
 }
