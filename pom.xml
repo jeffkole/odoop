@@ -20,6 +20,7 @@
 
     <modules>
         <module>odoop-parent</module>
+        <module>odoop-test</module>
         <module>common</module>
         <module>hdfs-utils</module>
         <module>hbase-filters</module>

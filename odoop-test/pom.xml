@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.opower</groupId>
+        <artifactId>odoop-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../odoop-parent</relativePath>
+    </parent>
+
+    <artifactId>odoop-test</artifactId>
+    <packaging>jar</packaging>
+    <name>Odoop Test Utilities</name>
+    <description>Utilities to help with testing Odoop, Hadoop, and HBase</description>
+
+    <dependencies>
+        <!-- In a test artifact, the typical testing dependencies are needed in the compile scope -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <classifier>tests</classifier>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-test</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <!-- And oddly, the dependencies typically needed in the compile scope are actually needed in test -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
