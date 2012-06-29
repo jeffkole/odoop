@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>odoop-common</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

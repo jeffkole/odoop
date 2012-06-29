@@ -9,7 +9,7 @@
         <relativePath>../odoop-parent</relativePath>
     </parent>
 
-    <artifactId>common</artifactId>
+    <artifactId>odoop-common</artifactId>
     <packaging>jar</packaging>
     <name>Common</name>
     <description>Common utilities and classes for use across the full Odoop suite</description>
