@@ -11,14 +11,15 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import com.opower.hadoop.hbase.test.HBaseTestRunner;
 
 import static org.junit.Assert.*;
 
@@ -27,18 +28,13 @@ import static org.junit.Assert.*;
  *
  * @author jeff@opower.com
  */
+@RunWith(HBaseTestRunner.class)
 public class IntTestSelectorFilter {
-    private static HBaseTestingUtility hbaseTestingUtility;
+    private HBaseTestingUtility hbaseTestingUtility;
 
     private byte[] tableName = Bytes.toBytes("filter_test");
     private byte[] family = new byte[] { 'd' };
     private HTable table;
-
-    @BeforeClass
-    public static void setUpMiniCluster() throws Exception {
-        hbaseTestingUtility = new HBaseTestingUtility();
-        hbaseTestingUtility.startMiniCluster();
-    }
 
     @Before
     public void setUp() throws Exception {
@@ -48,11 +44,6 @@ public class IntTestSelectorFilter {
     @After
     public void tearDown() throws Exception {
         this.hbaseTestingUtility.deleteTable(this.tableName);
-    }
-
-    @AfterClass
-    public static void tearDownMiniCluster() throws Exception {
-        hbaseTestingUtility.shutdownMiniCluster();
     }
 
     @Test
