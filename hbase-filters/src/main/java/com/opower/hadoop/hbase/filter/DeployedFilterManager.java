@@ -36,7 +36,18 @@ public class DeployedFilterManager {
 
     private static final Log LOG = LogFactory.getLog(DeployedFilterManager.class);
     private static final Random RANDOM = new Random();
-    private static final DeployedFilterMetrics METRICS = new DeployedFilterMetrics();
+    private static DeployedFilterMetrics metrics;
+
+    /**
+     * Prevent the metrics from being instantiated and triggered on the client by hiding
+     * the instantiation in a static method.  Metrics should only be run on the server.
+     */
+    private static synchronized DeployedFilterMetrics getMetrics() {
+        if (metrics == null) {
+            metrics = new DeployedFilterMetrics();
+        }
+        return metrics;
+    }
 
     private final Configuration configuration;
 
@@ -121,7 +132,7 @@ public class DeployedFilterManager {
             // TODO: is creating a new configuration sufficient, or
             // does it need to be serialized from the DeployedFilter?
             ClassLoader filterLoader = new HdfsClassLoader(new Configuration(), jarPath);
-            METRICS.classLoaderInstantiated(filterLoader);
+            getMetrics().classLoaderInstantiated(filterLoader);
             Class<?> filterClass = Class.forName(filterClassName, true, filterLoader);
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("Filter class: %s@%x",
@@ -141,9 +152,9 @@ public class DeployedFilterManager {
                     filterLoader));
             }
             else {
-                METRICS.filterDynamicallyLoaded(filterClass);
+                getMetrics().filterDynamicallyLoaded(filterClass);
             }
-            METRICS.filterInstantiated(filterClass);
+            getMetrics().filterInstantiated(filterClass);
             return (Filter)filterClass.newInstance();
         }
         catch (Exception e) {
