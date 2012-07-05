@@ -4,9 +4,9 @@ import org.apache.hadoop.hbase.util.Bytes
 
 import scala.util.parsing.combinator.RegexParsers
 
-class QueryParser(input : String) extends RegexParsers {
+class QueryParser(private val input : String) extends RegexParsers {
   val queryBuilder : QueryBuilder = new QueryBuilder(input)
-  parseAll(this.query, input)
+  parseAll(this.query, input.toLowerCase)
 
   def query = selectClause ~ fromClause ~ whereClause.?
 
