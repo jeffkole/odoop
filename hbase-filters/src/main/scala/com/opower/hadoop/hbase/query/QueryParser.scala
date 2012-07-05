@@ -11,12 +11,8 @@ class QueryParser(input : String) extends RegexParsers {
   def query = selectClause ~ fromClause ~ whereClause.?
 
   def selectClause = scanClause | getClause
-  def scanClause = "scan" ~> repsep(columnDefinition, ",") ^^ {
-    case _ => this.queryBuilder.scan
-  }
-  def getClause = "get" ~> repsep(columnDefinition, ",") ^^ {
-    case _ => this.queryBuilder.get
-  }
+  def scanClause = "scan" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.scan }
+  def getClause = "get" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.get }
 
   def columnDefinition = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
     case v ~ f ~ ":" ~ q ~ t => this.queryBuilder.addColumnDefinition(v, f, q, t)
