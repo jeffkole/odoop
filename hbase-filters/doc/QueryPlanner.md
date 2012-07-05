@@ -15,9 +15,9 @@ Example Queries
 
 ```
 scan d:address,
-     all versions of d:clicks between 2012-06-01T00:00:00 and 2012-07-01T00:00:00
+     all versions of d:clicks between {start} and {stop}
 from customer
-where rowkey = 42
+where rowkey = {id}
 ```
 
 Additional query functionality can include pattern matching at the column level like the following.
@@ -32,7 +32,9 @@ Fetch the most recent version of all predictions:
 scan d:preditions* ...
 ```
 
-Additional constraints can be added to the where clause as well.
+Additional constraints can be added to the where clause as well.  This example shows a literal parameter value just
+for ease of understanding.  Literal values are not allowed; all parameters must be demarcated with { and } and then
+set according to the parameter name.
 
 Assuming a click is deserialized as "<target URL>|<referrer URL>", fetch all clicks coming from http://google.com:
 ```
@@ -51,11 +53,14 @@ Example Usage
 
 ```
 QueryPlanner planner = new QueryPlanner(HBaseConfiguration.create());
-ResultScanner scanner = planner.scan("scan * from customer where rowkey = 42")
+Query query = planner.parse("scan from customer where rowkey = {id}");
+query.setInt("id", 42);
+ResultScanner scanner = query.scan();
 for (Result result : scanner) {
     // do some real work
 }
 scanner.close();
+query.close();
 planner.close();
 ```
 
