@@ -108,7 +108,7 @@ class QueryBuilder(query : String) {
       case o ~ p => RowConstraint(o, p)
     }
     // TODO: how should the individual operators be parsed out?
-    def rowKeyOperator = "([<>]=?|=)".r
+    def rowKeyOperator = "<" | "<=" | ">" | ">=" | "="
 
     /** All named parameters are word characters enclosed with { and } */
     def parameter = "{" ~> """\w*""".r <~ "}"
