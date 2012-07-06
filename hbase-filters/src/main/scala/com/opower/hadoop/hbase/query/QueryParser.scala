@@ -2,6 +2,8 @@ package com.opower.hadoop.hbase.query
 
 import org.apache.hadoop.hbase.util.Bytes
 
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.Map
 import scala.util.parsing.combinator.RegexParsers
 
 object QueryOperation extends Enumeration {
@@ -30,6 +32,8 @@ class QueryBuilder(query : String) {
   private var columns : List[Column] = Nil
   private var rowConstraints : List[RowConstraint] = Nil
 
+  private var namedParameters : Map[String, Any] = new HashMap[String, Any]
+
   // Parse the input after all of the private variables have been declared
   this.parser.parseAll(parser.query, query.toLowerCase)
 
@@ -44,11 +48,21 @@ class QueryBuilder(query : String) {
     qualifier : String,
     timeRange : Option[(String, String)]) = {
     // TODO: handle hex-encoded bytes in the qualifier
-    this.columns = Column(Bytes.toBytes(family),
-                          Bytes.toBytes(qualifier),
-                          version.getOrElse(QueryVersions.One),
-                          timeRange) ::
-                        this.columns
+    val column = Column(Bytes.toBytes(family),
+                        Bytes.toBytes(qualifier),
+                        version.getOrElse(QueryVersions.One),
+                        timeRange)
+    for ((startName, stopName) <- timeRange) {
+      if (this.namedParameters.contains(startName)) {
+        throw new RuntimeException("startName %s exists".format(startName))
+      }
+      this.namedParameters.put(startName, column)
+      if (this.namedParameters.contains(stopName)) {
+        throw new RuntimeException("stopName %s exists".format(stopName))
+      }
+      this.namedParameters.put(stopName, column)
+    }
+    this.columns = column :: this.columns
   }
 
   private def addConstraint(constraint : RowConstraint) = {
