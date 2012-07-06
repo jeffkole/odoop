@@ -90,7 +90,7 @@ class QueryBuilder(query : String) {
     /** Column family name must consist of printable characters. Regex \w is pretty close */
     def columnFamily = """\w+""".r
     /** Column qualifier can be any bytes, so we accept word characters (\w) or hex-encoded byte literals */
-    def columnQualifier = """(\w|0x[0-9]{2})+""".r
+    def columnQualifier = """(\w|0x[0-9a-fA-F]{2})+""".r
     def timeRange = "between" ~ parameter ~ "and" ~ parameter ^^ {
       case _ ~ a ~ _ ~ b => (a, b)
     }
