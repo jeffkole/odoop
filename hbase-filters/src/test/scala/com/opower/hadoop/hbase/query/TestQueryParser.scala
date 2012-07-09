@@ -39,6 +39,10 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     runFailedParse[String](parser, parser.positiveWholeNumber, "a 19 b")
   }
 
+  @Test
+  def testPositiveWholeNumberDoesNotMatchDecimalNumber() {
+    runFailedParse[String](parser, parser.positiveWholeNumber, "10.42")
+  }
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
