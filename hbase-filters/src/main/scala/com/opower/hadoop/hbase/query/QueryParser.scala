@@ -65,8 +65,9 @@ class QueryBuilder(query : String) {
     this.columns = column :: this.columns
   }
 
-  protected[query] def addConstraint(constraint : RowConstraint) = {
+  protected[query] def addConstraint(constraint : RowConstraint) : RowConstraint = {
     this.rowConstraints = constraint :: this.rowConstraints
+    constraint
   }
 
   override def toString = {
@@ -103,7 +104,8 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
    */
   def tableName = """\w[\w\-.]*""".r
 
-  def whereClause = "where" ~> rowKeyConstraint ^^ { c => this.queryBuilder.addConstraint(c) }
+  def whereClause : Parser[RowConstraint] = "where" ~> rowKeyConstraint ^^ { c => this.queryBuilder.addConstraint(c) }
+
   // TODO: Support "rowkey between X and Y" syntax
   def rowKeyConstraint : Parser[RowConstraint] = "rowkey" ~> rowKeyOperator ~ parameter ^^ {
     case o ~ p => RowConstraint(o, p)
