@@ -112,7 +112,7 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
   def rowKeyOperator = "<" | "<=" | ">" | ">=" | "="
 
   /** All named parameters are word characters enclosed with { and } */
-  def parameter = "{" ~> """\w*""".r <~ "}"
+  def parameter : Parser[String] = "{" ~> """\w*""".r <~ "}"
 
   def positiveWholeNumber : Parser[String] = """[1-9]\d*""".r
 }

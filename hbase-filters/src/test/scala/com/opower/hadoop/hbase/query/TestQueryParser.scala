@@ -43,6 +43,21 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   def testPositiveWholeNumberDoesNotMatchDecimalNumber() {
     runFailedParse[String](parser, parser.positiveWholeNumber, "10.42")
   }
+
+  @Test
+  def testParameterMatchesCorrectly() {
+    runSuccessfulParse[String](parser, parser.parameter, "{paramName}", "paramName")
+  }
+
+  @Test
+  def testParameterWithWhitespaceWorks() {
+    runSuccessfulParse[String](parser, parser.parameter, "{ paramName }", "paramName")
+  }
+
+  @Test
+  def testParameterMissingBrackets() {
+    runFailedParse[String](parser, parser.parameter, "paramName")
+  }
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
