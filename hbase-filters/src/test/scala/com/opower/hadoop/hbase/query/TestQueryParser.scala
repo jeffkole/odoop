@@ -58,6 +58,21 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   def testParameterMissingBrackets() {
     runFailedParse[String](parser, parser.parameter, "paramName")
   }
+
+  @Test
+  def testRowKeyOperatorMatchesCorrectly() {
+    for (op <- Array("<", "<=", ">", ">=", "=")) {
+      runSuccessfulParse[String](parser, parser.rowKeyOperator, op, op)
+    }
+  }
+
+  @Test
+  def testRowKeyOperatorMismatches() {
+    for (op <- Array("!", "&&", "||", "<>")) {
+      runFailedParse[String](parser, parser.rowKeyOperator, op)
+    }
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {

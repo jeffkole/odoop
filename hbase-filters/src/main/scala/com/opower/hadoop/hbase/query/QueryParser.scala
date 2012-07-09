@@ -108,8 +108,8 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
   def rowKeyConstraint = "rowkey" ~> rowKeyOperator ~ parameter ^^ {
     case o ~ p => RowConstraint(o, p)
   }
-  // TODO: how should the individual operators be parsed out?
-  def rowKeyOperator = "<" | "<=" | ">" | ">=" | "="
+  // Longer patterns must come first (ie, <= and >= before < and >) so that the match can be greedy
+  def rowKeyOperator : Parser[String] = "<=" | ">=" | "<" | ">" | "="
 
   /** All named parameters are word characters enclosed with { and } */
   def parameter : Parser[String] = "{" ~> """\w*""".r <~ "}"
