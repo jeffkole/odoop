@@ -102,7 +102,7 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
    * Table names must not start with a '.' or a '-' and may only contain Latin letters or numbers
    * as well as '_', '-', or '.'.
    */
-  def tableName = """\w[\w\-.]*""".r
+  def tableName : Parser[String] = """\w[\w\-.]*""".r
 
   def whereClause : Parser[RowConstraint] = "where" ~> rowKeyConstraint ^^ { c => this.queryBuilder.addConstraint(c) }
 

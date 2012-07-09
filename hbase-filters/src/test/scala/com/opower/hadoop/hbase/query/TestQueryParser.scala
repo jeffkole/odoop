@@ -88,6 +88,20 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     runFailedParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey == {id}")
   }
 
+  @Test
+  def testTableNameMatchesValidTableNames() {
+    for (tableName <- Array("t", "table_name", "aTable", "table-one", "table.name", "987654321")) {
+      runSuccessfulParse[String](parser, parser.tableName, tableName, tableName)
+    }
+  }
+
+  @Test
+  def testTableNameSkipsInvalidTableNames() {
+    for (tableName <- Array(".META.", "-ROOT-", "", "this is a table")) {
+      runFailedParse[String](parser, parser.tableName, tableName)
+    }
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
