@@ -105,7 +105,7 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
 
   def whereClause = "where" ~> rowKeyConstraint ^^ { c => this.queryBuilder.addConstraint(c) }
   // TODO: Support "rowkey between X and Y" syntax
-  def rowKeyConstraint = "rowkey" ~> rowKeyOperator ~ parameter ^^ {
+  def rowKeyConstraint : Parser[RowConstraint] = "rowkey" ~> rowKeyOperator ~ parameter ^^ {
     case o ~ p => RowConstraint(o, p)
   }
   // Longer patterns must come first (ie, <= and >= before < and >) so that the match can be greedy

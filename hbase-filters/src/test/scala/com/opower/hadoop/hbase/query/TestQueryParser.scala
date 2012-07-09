@@ -73,6 +73,21 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     }
   }
 
+  @Test
+  def testRowKeyConstraintMatches() {
+    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey = {id}", RowConstraint("=", "id"))
+  }
+
+  @Test
+  def testRowKeyConstraintWhitespace() {
+    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey<={ id }", RowConstraint("<=", "id"))
+  }
+
+  @Test
+  def testRowKeyPartialMatchFails() {
+    runFailedParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey == {id}")
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
