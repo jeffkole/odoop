@@ -37,37 +37,33 @@ class QueryBuilder(query : String) {
   // Parse the input after all of the private variables have been declared
   this.parser.parseAll(parser.query, query.toLowerCase)
 
-  protected[query] def scan = { this.queryOperation = Some(QueryOperation.Scan) }
+  protected[query] def scan : QueryBuilder = {
+    this.queryOperation = Some(QueryOperation.Scan)
+    this
+  }
 
-  protected[query] def get = { this.queryOperation = Some(QueryOperation.Get) }
+  protected[query] def get : QueryBuilder = {
+    this.queryOperation = Some(QueryOperation.Get)
+    this
+  }
 
-  protected[query] def setTableName(tableName : String) = { this.tableName = Some(tableName) }
+  protected[query] def setTableName(tableName : String) : QueryBuilder = {
+    this.tableName = Some(tableName)
+    this
+  }
 
-  protected[query] def addColumnDefinition(version : Option[QueryVersions],
-    family : String,
-    qualifier : String,
-    timeRange : Option[(String, String)]) = {
-    // TODO: handle hex-encoded bytes in the qualifier
-    val column = Column(Bytes.toBytes(family),
-                        Bytes.toBytes(qualifier),
-                        version.getOrElse(QueryVersions.One),
-                        timeRange)
-    for ((startName, stopName) <- timeRange) {
-      if (this.namedParameters.contains(startName)) {
-        throw new RuntimeException("startName %s exists".format(startName))
-      }
+  protected[query] def addColumnDefinition(column : Column) : QueryBuilder = {
+    for ((startName, stopName) <- column.timeRange) {
       this.namedParameters.put(startName, column)
-      if (this.namedParameters.contains(stopName)) {
-        throw new RuntimeException("stopName %s exists".format(stopName))
-      }
       this.namedParameters.put(stopName, column)
     }
     this.columns = column :: this.columns
+    this
   }
 
-  protected[query] def addConstraint(constraint : RowConstraint) : RowConstraint = {
+  protected[query] def addConstraint(constraint : RowConstraint) : QueryBuilder = {
     this.rowConstraints = constraint :: this.rowConstraints
-    constraint
+    this
   }
 
   override def toString = {
@@ -83,28 +79,49 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
   def scanClause = "scan" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.scan }
   def getClause = "get" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.get }
 
-  def columnDefinition = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
-    case v ~ f ~ ":" ~ q ~ t => this.queryBuilder.addColumnDefinition(v, f, q, t)
+  def columnDefinition : Parser[Column] = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
+    case versions ~ family ~ ":" ~ qualifier ~ time => {
+      // TODO: handle hex-encoded bytes in the qualifier
+      val column = Column(Bytes.toBytes(family),
+                          Bytes.toBytes(qualifier),
+                          versions.getOrElse(QueryVersions.One),
+                          time)
+      this.queryBuilder.addColumnDefinition(column)
+      column
+    }
   }
-  def versionDefinition = allVersions | someVersions
+
+  def versionDefinition : Parser[QueryVersions] = allVersions | someVersions
+
   def allVersions : Parser[QueryVersions] = "all" ~ "versions" ~ "of" ^^ { _ => QueryVersions.All }
+
   def someVersions : Parser[QueryVersions] = positiveWholeNumber <~ "versions?".r <~ "of" ^^ { n => QueryVersions(n.toInt) }
+
   /** Column family name must consist of printable characters. Regex \w is pretty close */
-  def columnFamily = """\w+""".r
+  def columnFamily : Parser[String] = """\w+""".r
+
   /** Column qualifier can be any bytes, so we accept word characters (\w) or hex-encoded byte literals */
-  def columnQualifier = """(\w|0x[0-9a-fA-F]{2})+""".r
-  def timeRange = "between" ~ parameter ~ "and" ~ parameter ^^ {
+  def columnQualifier : Parser[String] = """(\w|0x[0-9a-fA-F]{2})+""".r
+
+  def timeRange : Parser[(String, String)] = "between" ~ parameter ~ "and" ~ parameter ^^ {
     case _ ~ a ~ _ ~ b => (a, b)
   }
 
-  def fromClause = "from" ~> tableName ^^ { t => this.queryBuilder.setTableName(t) }
+  def fromClause : Parser[String] = "from" ~> tableName ^^ { t =>
+    this.queryBuilder.setTableName(t)
+    t
+  }
+
   /**
    * Table names must not start with a '.' or a '-' and may only contain Latin letters or numbers
    * as well as '_', '-', or '.'.
    */
   def tableName : Parser[String] = """\w[\w\-.]*""".r
 
-  def whereClause : Parser[RowConstraint] = "where" ~> rowKeyConstraint ^^ { c => this.queryBuilder.addConstraint(c) }
+  def whereClause : Parser[RowConstraint] = "where" ~> rowKeyConstraint ^^ { c =>
+    this.queryBuilder.addConstraint(c)
+    c
+  }
 
   // TODO: Support "rowkey between X and Y" syntax
   def rowKeyConstraint : Parser[RowConstraint] = "rowkey" ~> rowKeyOperator ~ parameter ^^ {
