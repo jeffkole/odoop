@@ -163,6 +163,16 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     runFailedParse[QueryVersions](parser, parser.someVersions, "no version of")
   }
 
+  @Test
+  def testAllVersionsMatches() {
+    runSuccessfulParse[QueryVersions](parser, parser.allVersions, "all versions of", QueryVersions.All)
+  }
+
+  @Test
+  def testAllVersionsSkipsBadInput() {
+    runFailedParse[QueryVersions](parser, parser.allVersions, "some versions of")
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
