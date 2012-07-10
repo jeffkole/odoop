@@ -117,7 +117,6 @@ class QueryBuilder(query : String) {
   }
 
   protected[query] def addColumnDefinition(column : Column) : QueryBuilder = {
-    printf("adding column definition: %s%n", column)
     for ((startName, stopName) <- column.timeRange) {
       this.namedParameters.put(startName, column)
       this.namedParameters.put(stopName, column)
@@ -141,14 +140,12 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
   def query : Parser[~[~[List[Column], String], Option[RowConstraint]]] = scanClause ~ fromClause ~ whereClause.?
 
   def scanClause : Parser[List[Column]] = "scan" ~> repsep(columnDefinition, ",") ^^ { q =>
-    printf("scanClause: '%s'%n", q)
     this.queryBuilder.scan
     q
   }
 
   def columnDefinition : Parser[Column] = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
     case versions ~ family ~ ":" ~ qualifier ~ time => {
-      printf("columnDefinition: v: %s; f: %s; q: %s; t: %s%n", versions, family, qualifier, time)
       val column = Column(Bytes.toBytesBinary(family),
                           Bytes.toBytesBinary(qualifier),
                           versions.getOrElse(QueryVersions.One),
