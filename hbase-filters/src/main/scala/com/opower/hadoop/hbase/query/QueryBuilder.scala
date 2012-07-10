@@ -3,6 +3,15 @@ package com.opower.hadoop.hbase.query
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.Map
 
+object QueryBuilder {
+  def parse(query : String) : QueryBuilder = {
+    val builder = new QueryBuilder(query)
+    val parser = new QueryParser(builder)
+    parser.parseAll(parser.query, query.toLowerCase)
+    builder
+  }
+}
+
 class QueryBuilder(query : String) {
   private var tableName : Option[String] = None
   private var queryOperation : Option[QueryOperation.Value] = None
