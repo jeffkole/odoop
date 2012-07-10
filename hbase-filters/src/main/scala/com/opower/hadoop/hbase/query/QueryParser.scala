@@ -81,9 +81,8 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
 
   def columnDefinition : Parser[Column] = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
     case versions ~ family ~ ":" ~ qualifier ~ time => {
-      // TODO: handle hex-encoded bytes in the qualifier
-      val column = Column(Bytes.toBytes(family),
-                          Bytes.toBytes(qualifier),
+      val column = Column(Bytes.toBytesBinary(family),
+                          Bytes.toBytesBinary(qualifier),
                           versions.getOrElse(QueryVersions.One),
                           time)
       this.queryBuilder.addColumnDefinition(column)
