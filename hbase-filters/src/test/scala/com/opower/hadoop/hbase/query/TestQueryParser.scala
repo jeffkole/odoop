@@ -137,6 +137,17 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     runFailedParse[String](parser, parser.columnQualifier, qualifier)
   }
 
+  @Test
+  def testColumnFamilyMatches() {
+    runSuccessfulParse[String](parser, parser.columnFamily, "family", "family")
+  }
+
+  @Test
+  def testColumnFamilySkipsBytes() {
+    val qualifier = Bytes.toStringBinary(Array[Byte]('\100', '\24', 0xF, 0, 0x8))
+    runFailedParse[String](parser, parser.columnFamily, qualifier)
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
