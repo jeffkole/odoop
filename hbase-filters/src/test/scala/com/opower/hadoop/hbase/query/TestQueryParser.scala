@@ -102,6 +102,16 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     }
   }
 
+  @Test
+  def testTimeRangeMatches() {
+    runSuccessfulParse[(String, String)](parser, parser.timeRange, "between {start} and {stop}", ("start", "stop"))
+  }
+
+  @Test
+  def testTimeRangeSkipsInvalidRange() {
+    runFailedParse[(String, String)](parser, parser.timeRange, "between {start} & {stop}")
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
