@@ -32,7 +32,7 @@ public class DeployedFilterManager {
     /**
      * The default path to use for deployed jars.
      */
-    public static final String DEPLOY_FILTER_DEFAULT_PATH = "/tmp/com.opower.hadoop.hbase.DeployedFilterManager";
+    public static final String DEPLOY_FILTER_DEFAULT_PATH = "/tmp/com.opower.hadoop.hbase.filter.DeployedFilterManager";
 
     private static final Log LOG = LogFactory.getLog(DeployedFilterManager.class);
     private static final Random RANDOM = new Random();
