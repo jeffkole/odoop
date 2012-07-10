@@ -100,8 +100,13 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
   /** Column family name must consist of printable characters. Regex \w is pretty close */
   def columnFamily : Parser[String] = """\w+""".r
 
-  /** Column qualifier can be any bytes, so we accept word characters (\w) or hex-encoded byte literals */
-  def columnQualifier : Parser[String] = """(\w|0x[0-9a-fA-F]{2})+""".r
+  /**
+   * Column qualifier can be any bytes, so we accept characters that come out of a call to
+   * {@link org.apache.hadoop.hbase.util.Bytes#toStringBinary}.  This means, users must use
+   * {@link org.apache.hadoop.hbase.util.Bytes#toStringBinary} to translate qualifiers that are
+   * complex byte arrays into a String before constructing the query
+   */
+  def columnQualifier : Parser[String] = """([a-zA-Z0-9 `~!@#$%^&*()\-_=+\[\]\{\}\\|;:'",.<>/?]|(\\x[0-9]{2}))+""".r
 
   def timeRange : Parser[(String, String)] = "between" ~ parameter ~ "and" ~ parameter ^^ {
     case _ ~ a ~ _ ~ b => (a, b)

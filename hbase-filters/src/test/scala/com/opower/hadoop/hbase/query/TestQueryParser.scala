@@ -1,5 +1,7 @@
 package com.opower.hadoop.hbase.query
 
+import org.apache.hadoop.hbase.util.Bytes
+
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.junit.ShouldMatchersForJUnit
 
@@ -110,6 +112,29 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   @Test
   def testTimeRangeSkipsInvalidRange() {
     runFailedParse[(String, String)](parser, parser.timeRange, "between {start} & {stop}")
+  }
+
+  @Test
+  def testColumnQualifierMatches() {
+    runSuccessfulParse[String](parser, parser.columnQualifier, "bigData", "bigData")
+  }
+
+  @Test
+  def testColumnQualifierMatchesCrazyBytes() {
+    val qualifier = Bytes.toStringBinary(Array[Byte]('\100', '\24', 0xF, 0, 0x8))
+    runSuccessfulParse[String](parser, parser.columnQualifier, qualifier, qualifier)
+  }
+
+  @Test
+  def testColumnQualifierMatchesCrazyCharacters() {
+    val qualifier = """abcdeABDCE01234 `~!@#$%^&*()-_=+[]{}\|;:'",.<>/?"""
+    runSuccessfulParse[String](parser, parser.columnQualifier, qualifier, qualifier)
+  }
+
+  @Test
+  def testColumnQualifierSkipsNonBinaryFormattedBytes() {
+    val qualifier = Bytes.toString(Array[Byte]('\100', '\24', 0xF, 0, 0x8))
+    runFailedParse[String](parser, parser.columnQualifier, qualifier)
   }
 
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
