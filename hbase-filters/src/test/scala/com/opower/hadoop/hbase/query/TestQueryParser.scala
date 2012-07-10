@@ -9,11 +9,13 @@ import org.junit.Before
 import org.junit.Test
 
 class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
+  var builder : QueryBuilder = null
   var parser : QueryParser = null
 
   @Before
   def setUp() {
-    this.parser = new QueryParser(null)
+    this.builder = new QueryBuilder("")
+    this.parser = new QueryParser(this.builder)
   }
 
   @Test
@@ -91,6 +93,15 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   }
 
   @Test
+  def testWhereClauseMatches() {
+    val expectedConstraint = RowConstraint("=", "id")
+    this.builder.getRowConstraints should be ('empty)
+    runSuccessfulParse[RowConstraint](parser, parser.whereClause, "where rowkey = {id}", expectedConstraint)
+    this.builder.getRowConstraints should not be ('empty)
+    this.builder.getRowConstraints.head should equal (expectedConstraint)
+  }
+
+  @Test
   def testTableNameMatchesValidTableNames() {
     for (tableName <- Array("t", "table_name", "aTable", "table-one", "table.name", "987654321")) {
       runSuccessfulParse[String](parser, parser.tableName, tableName, tableName)
@@ -102,6 +113,14 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     for (tableName <- Array(".META.", "-ROOT-", "", "this is a table")) {
       runFailedParse[String](parser, parser.tableName, tableName)
     }
+  }
+
+  @Test
+  def testFromClauseMatches() {
+    val expectedTableName = "tableName"
+    this.builder.getTableName should be ('empty)
+    runSuccessfulParse[String](parser, parser.fromClause, "from tableName", expectedTableName)
+    this.builder.getTableName.get should equal (expectedTableName)
   }
 
   @Test
@@ -127,8 +146,14 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test
   def testColumnQualifierMatchesCrazyCharacters() {
-    val qualifier = """abcdeABDCE01234 `~!@#$%^&*()-_=+[]{}\|;:'",.<>/?"""
+    val qualifier = """abcdeABDCE01234 `~!@#$%^&*()-_=+[]{}\|;:'".<>/?"""
     runSuccessfulParse[String](parser, parser.columnQualifier, qualifier, qualifier)
+  }
+
+  @Test
+  def testColumnQualifierStopsOnComma() {
+    val qualifier = """abcdeABDCE01234 `~!@#$%^&*()-_=+[]{}\|;:'",.<>/?"""
+    runFailedParse[String](parser, parser.columnQualifier, qualifier)
   }
 
   @Test
@@ -171,6 +196,46 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   @Test
   def testAllVersionsSkipsBadInput() {
     runFailedParse[QueryVersions](parser, parser.allVersions, "some versions of")
+  }
+
+  @Test
+  def testColumnDefinitionMatches() {
+    this.builder.getColumns should be ('empty)
+    val family = "family"
+    val qualifier = "qualifier"
+    val expectedColumn = Column(Bytes.toBytesBinary(family), Bytes.toBytesBinary(qualifier), QueryVersions.One, None)
+    runSuccessfulParse[Column](parser, parser.columnDefinition, family + ":" + qualifier, expectedColumn)
+    this.builder.getColumns should not be ('empty)
+    this.builder.getColumns.head should equal (expectedColumn)
+  }
+
+  @Test
+  def testScanClauseMatches() {
+    val scanClause = "scan all versions of d:one"
+    val expectedColumn = Column(Bytes.toBytesBinary("d"), Bytes.toBytesBinary("one"), QueryVersions.All)
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getColumns should be ('empty)
+    runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, List(expectedColumn))
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getColumns should not be ('empty)
+    this.builder.getColumns.head should equal (expectedColumn)
+  }
+
+  @Test
+  def testScanClauseMatchesMultipleColumns() {
+    val scanClause = "scan all versions of d:one, d:two, 3 versions of d:three"
+    val family = Bytes.toBytesBinary("d")
+    val expectedColumns = List(
+      Column(family, Bytes.toBytesBinary("one"), QueryVersions.All),
+      Column(family, Bytes.toBytesBinary("two")),
+      Column(family, Bytes.toBytesBinary("three"), QueryVersions(3)))
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getColumns should be ('empty)
+    runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, expectedColumns)
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getColumns should not be ('empty)
+    // the columns are built up using `::`, so they will be reversed
+    this.builder.getColumns should equal (expectedColumns.reverse)
   }
 
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that

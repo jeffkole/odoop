@@ -19,14 +19,57 @@ object QueryVersions {
 
 case class RowConstraint(operator : String, parameter : String)
 
-case class Column(family : Array[Byte],
-  qualifier : Array[Byte],
-  versions : QueryVersions,
-  timeRange : Option[(String, String)])
+case class Column(family    : Array[Byte]              = Array[Byte](),
+                  qualifier : Array[Byte]              = Array[Byte](),
+                  versions  : QueryVersions            = QueryVersions.One,
+                  timeRange : Option[(String, String)] = None) {
+
+  /**
+   * Judges equality based on the deep equality of the family and qualifier as well as
+   * the versions and time range
+   *
+   * {@inheritDoc}
+   */
+  override def equals(other : Any) : Boolean = {
+    if (other == null) {
+      return false
+    }
+    if (!other.isInstanceOf[Column]) {
+      return false
+    }
+    val that = other.asInstanceOf[Column]
+    return (this.family.deep.equals(that.family.deep) &&
+      this.qualifier.deep.equals(that.qualifier.deep) &&
+      this.versions.equals(that.versions) &&
+      this.timeRange.equals(that.timeRange))
+  }
+
+  /**
+   * Computes hashCode based on the deep equality of the family and qualifier as well as
+   * the versions and time range
+   *
+   * {@inheritDoc}
+   */
+  override def hashCode() : Int = {
+    var result = 17
+    result = 31 * result + this.family.deep.hashCode
+    result = 31 * result + this.qualifier.deep.hashCode
+    result = 31 * result + this.versions.hashCode
+    result = 31 * result + this.timeRange.hashCode
+    result
+  }
+}
+
+class QueryEngine {
+  def parse(query : String) : QueryBuilder = {
+    val builder = new QueryBuilder(query)
+    val parser = new QueryParser(builder)
+    parser.parseAll(parser.query, query.toLowerCase)
+    builder
+  }
+}
 
 class QueryBuilder(query : String) {
-  private val parser = new QueryParser(this)
-
   private var tableName : Option[String] = None
   private var queryOperation : Option[QueryOperation.Value] = None
   private var columns : List[Column] = Nil
@@ -34,8 +77,21 @@ class QueryBuilder(query : String) {
 
   private var namedParameters : Map[String, Any] = new HashMap[String, Any]
 
-  // Parse the input after all of the private variables have been declared
-  this.parser.parseAll(parser.query, query.toLowerCase)
+  protected[query] def getTableName : Option[String] = {
+    this.tableName
+  }
+
+  protected[query] def getQueryOperation : Option[QueryOperation.Value] = {
+    this.queryOperation
+  }
+
+  protected[query] def getColumns : List[Column] = {
+    this.columns
+  }
+
+  protected[query] def getRowConstraints : List[RowConstraint] = {
+    this.rowConstraints
+  }
 
   protected[query] def scan : QueryBuilder = {
     this.queryOperation = Some(QueryOperation.Scan)
@@ -53,6 +109,7 @@ class QueryBuilder(query : String) {
   }
 
   protected[query] def addColumnDefinition(column : Column) : QueryBuilder = {
+    printf("adding column definition: %s%n", column)
     for ((startName, stopName) <- column.timeRange) {
       this.namedParameters.put(startName, column)
       this.namedParameters.put(stopName, column)
@@ -76,11 +133,16 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
   def query = selectClause ~ fromClause ~ whereClause.?
 
   def selectClause = scanClause | getClause
-  def scanClause = "scan" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.scan }
+  def scanClause : Parser[List[Column]] = "scan" ~> repsep(columnDefinition, ",") ^^ { q =>
+    printf("scanClause: '%s'%n", q)
+    this.queryBuilder.scan
+    q
+  }
   def getClause = "get" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.get }
 
   def columnDefinition : Parser[Column] = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
     case versions ~ family ~ ":" ~ qualifier ~ time => {
+      printf("columnDefinition: v: %s; f: %s; q: %s; t: %s%n", versions, family, qualifier, time)
       val column = Column(Bytes.toBytesBinary(family),
                           Bytes.toBytesBinary(qualifier),
                           versions.getOrElse(QueryVersions.One),
@@ -105,7 +167,8 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
    * {@link org.apache.hadoop.hbase.util.Bytes#toStringBinary} to translate qualifiers that are
    * complex byte arrays into a String before constructing the query
    */
-  def columnQualifier : Parser[String] = """([a-zA-Z0-9 `~!@#$%^&*()\-_=+\[\]\{\}\\|;:'",.<>/?]|(\\x[0-9]{2}))+""".r
+  // TODO: handle commas in the qualifier name, which currently break parsing done by repsep(columnDefinition, ",")
+  def columnQualifier : Parser[String] = """([a-zA-Z0-9 `~!@#$%^&*()\-_=+\[\]\{\}\\|;:'".<>/?]|(\\x[0-9]{2}))+""".r
 
   def timeRange : Parser[(String, String)] = "between" ~ parameter ~ "and" ~ parameter ^^ {
     case _ ~ a ~ _ ~ b => (a, b)
