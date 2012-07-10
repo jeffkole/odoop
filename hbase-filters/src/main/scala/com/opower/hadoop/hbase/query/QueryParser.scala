@@ -138,15 +138,13 @@ class QueryBuilder(query : String) {
 }
 
 protected[query] class QueryParser(private val queryBuilder : QueryBuilder) extends RegexParsers {
-  def query = selectClause ~ fromClause ~ whereClause.?
+  def query : Parser[~[~[List[Column], String], Option[RowConstraint]]] = scanClause ~ fromClause ~ whereClause.?
 
-  def selectClause = scanClause | getClause
   def scanClause : Parser[List[Column]] = "scan" ~> repsep(columnDefinition, ",") ^^ { q =>
     printf("scanClause: '%s'%n", q)
     this.queryBuilder.scan
     q
   }
-  def getClause = "get" ~> repsep(columnDefinition, ",") ^^ { _ => this.queryBuilder.get }
 
   def columnDefinition : Parser[Column] = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
     case versions ~ family ~ ":" ~ qualifier ~ time => {

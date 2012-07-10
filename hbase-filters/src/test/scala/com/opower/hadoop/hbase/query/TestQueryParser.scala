@@ -261,6 +261,36 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     this.builder.getColumns should equal (expectedColumns.reverse)
   }
 
+  @Test
+  def testQueryMatches() {
+    val query = """scan d:one, 1 version of d:two, 2 versions of d:three between {start} and {stop},
+      3 versions of d:four, all versions of d:five between {start} and {stop} from table where rowkey <= {maxId}"""
+    val tableName = "table"
+    val family = Bytes.toBytesBinary("d")
+    val expectedColumns = List(
+      Column(family, Bytes.toBytesBinary("one")),
+      Column(family, Bytes.toBytesBinary("two"), QueryVersions.One),
+      Column(family, Bytes.toBytesBinary("three"), QueryVersions(2), Some(("start", "stop"))),
+      Column(family, Bytes.toBytesBinary("four"), QueryVersions(3)),
+      Column(family, Bytes.toBytesBinary("five"), QueryVersions.All, Some(("start", "stop"))))
+    val expectedRowConstraint = RowConstraint("<=", "maxId")
+    // "stable identifier required", so make a new val to use
+    val parserVal = parser
+    val expectedResult = new parserVal.~(new parserVal.~(expectedColumns, tableName), Some(expectedRowConstraint))
+
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getTableName should be ('empty)
+    this.builder.getColumns should be ('empty)
+    this.builder.getRowConstraints should be ('empty)
+    runSuccessfulParse[Any](parser, parser.query, query, expectedResult)
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getTableName.get should equal (tableName)
+    this.builder.getColumns should not be ('empty)
+    this.builder.getColumns should equal (expectedColumns.reverse)
+    this.builder.getRowConstraints should not be ('empty)
+    this.builder.getRowConstraints.head should equal (expectedRowConstraint)
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
