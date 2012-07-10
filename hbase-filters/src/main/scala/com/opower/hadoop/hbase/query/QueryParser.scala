@@ -50,13 +50,21 @@ case class Column(family    : Array[Byte]              = Array[Byte](),
    *
    * {@inheritDoc}
    */
-  override def hashCode() : Int = {
+  override def hashCode : Int = {
     var result = 17
     result = 31 * result + this.family.deep.hashCode
     result = 31 * result + this.qualifier.deep.hashCode
     result = 31 * result + this.versions.hashCode
     result = 31 * result + this.timeRange.hashCode
     result
+  }
+
+  override def toString : String = {
+    "Column(%s, %s, %s, %s)".format(
+      Bytes.toStringBinary(this.family),
+      Bytes.toStringBinary(this.qualifier),
+      this.versions,
+      this.timeRange)
   }
 }
 
@@ -168,7 +176,8 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
    * complex byte arrays into a String before constructing the query
    */
   // TODO: handle commas in the qualifier name, which currently break parsing done by repsep(columnDefinition, ",")
-  def columnQualifier : Parser[String] = """([a-zA-Z0-9 `~!@#$%^&*()\-_=+\[\]\{\}\\|;:'".<>/?]|(\\x[0-9]{2}))+""".r
+  // TODO: handle spaces in the qualifier name, which break parsing the rest of the line
+  def columnQualifier : Parser[String] = """([a-zA-Z0-9`~!@#$%^&*()\-_=+\[\]\{\}\\|;:'".<>/?]|(\\x[0-9]{2}))+""".r
 
   def timeRange : Parser[(String, String)] = "between" ~ parameter ~ "and" ~ parameter ^^ {
     case _ ~ a ~ _ ~ b => (a, b)

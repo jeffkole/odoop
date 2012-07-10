@@ -146,13 +146,19 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test
   def testColumnQualifierMatchesCrazyCharacters() {
-    val qualifier = """abcdeABDCE01234 `~!@#$%^&*()-_=+[]{}\|;:'".<>/?"""
+    val qualifier = """abcdeABDCE01234`~!@#$%^&*()-_=+[]{}\|;:'".<>/?"""
     runSuccessfulParse[String](parser, parser.columnQualifier, qualifier, qualifier)
   }
 
   @Test
   def testColumnQualifierStopsOnComma() {
-    val qualifier = """abcdeABDCE01234 `~!@#$%^&*()-_=+[]{}\|;:'",.<>/?"""
+    val qualifier = """abcdeABDCE01234,.<>/?"""
+    runFailedParse[String](parser, parser.columnQualifier, qualifier)
+  }
+
+  @Test
+  def testColumnQualifierStopsOnSpace() {
+    val qualifier = """abcdeABDCE01234 .<>/?"""
     runFailedParse[String](parser, parser.columnQualifier, qualifier)
   }
 
@@ -228,6 +234,23 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     val expectedColumns = List(
       Column(family, Bytes.toBytesBinary("one"), QueryVersions.All),
       Column(family, Bytes.toBytesBinary("two")),
+      Column(family, Bytes.toBytesBinary("three"), QueryVersions(3)))
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getColumns should be ('empty)
+    runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, expectedColumns)
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getColumns should not be ('empty)
+    // the columns are built up using `::`, so they will be reversed
+    this.builder.getColumns should equal (expectedColumns.reverse)
+  }
+
+  @Test
+  def testScanClauseMatchesMultipleColumnsWithTimeRanges() {
+    val scanClause = "scan all versions of d:one, d:two between {start} and {stop}, 3 versions of d:three"
+    val family = Bytes.toBytesBinary("d")
+    val expectedColumns = List(
+      Column(family, Bytes.toBytesBinary("one"), QueryVersions.All),
+      Column(family, Bytes.toBytesBinary("two"), QueryVersions.One, Some(("start", "stop"))),
       Column(family, Bytes.toBytesBinary("three"), QueryVersions(3)))
     this.builder.getQueryOperation should be ('empty)
     this.builder.getColumns should be ('empty)
