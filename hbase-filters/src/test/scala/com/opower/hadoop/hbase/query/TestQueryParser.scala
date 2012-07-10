@@ -9,6 +9,10 @@ import org.junit.Before
 import org.junit.Test
 
 class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
+  implicit def string2BinaryByteArray(string : String) : Array[Byte] = {
+    Bytes.toBytesBinary(string)
+  }
+
   var builder : QueryBuilder = null
   var parser : QueryParser = null
 
@@ -209,7 +213,7 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     this.builder.getColumns should be ('empty)
     val family = "family"
     val qualifier = "qualifier"
-    val expectedColumn = Column(Bytes.toBytesBinary(family), Bytes.toBytesBinary(qualifier), QueryVersions.One, None)
+    val expectedColumn = Column(family, qualifier, QueryVersions.One, None)
     runSuccessfulParse[Column](parser, parser.columnDefinition, family + ":" + qualifier, expectedColumn)
     this.builder.getColumns should not be ('empty)
     this.builder.getColumns.head should equal (expectedColumn)
@@ -218,7 +222,7 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   @Test
   def testScanClauseMatches() {
     val scanClause = "scan all versions of d:one"
-    val expectedColumn = Column(Bytes.toBytesBinary("d"), Bytes.toBytesBinary("one"), QueryVersions.All)
+    val expectedColumn = Column("d", "one", QueryVersions.All)
     this.builder.getQueryOperation should be ('empty)
     this.builder.getColumns should be ('empty)
     runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, List(expectedColumn))
@@ -230,11 +234,11 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   @Test
   def testScanClauseMatchesMultipleColumns() {
     val scanClause = "scan all versions of d:one, d:two, 3 versions of d:three"
-    val family = Bytes.toBytesBinary("d")
+    val family = "d"
     val expectedColumns = List(
-      Column(family, Bytes.toBytesBinary("one"), QueryVersions.All),
-      Column(family, Bytes.toBytesBinary("two")),
-      Column(family, Bytes.toBytesBinary("three"), QueryVersions(3)))
+      Column(family, "one", QueryVersions.All),
+      Column(family, "two"),
+      Column(family, "three", QueryVersions(3)))
     this.builder.getQueryOperation should be ('empty)
     this.builder.getColumns should be ('empty)
     runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, expectedColumns)
@@ -247,11 +251,11 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   @Test
   def testScanClauseMatchesMultipleColumnsWithTimeRanges() {
     val scanClause = "scan all versions of d:one, d:two between {start} and {stop}, 3 versions of d:three"
-    val family = Bytes.toBytesBinary("d")
+    val family = "d"
     val expectedColumns = List(
-      Column(family, Bytes.toBytesBinary("one"), QueryVersions.All),
-      Column(family, Bytes.toBytesBinary("two"), QueryVersions.One, Some(("start", "stop"))),
-      Column(family, Bytes.toBytesBinary("three"), QueryVersions(3)))
+      Column(family, "one", QueryVersions.All),
+      Column(family, "two", QueryVersions.One, Some(("start", "stop"))),
+      Column(family, "three", QueryVersions(3)))
     this.builder.getQueryOperation should be ('empty)
     this.builder.getColumns should be ('empty)
     runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, expectedColumns)
@@ -266,13 +270,13 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     val query = """scan d:one, 1 version of d:two, 2 versions of d:three between {start} and {stop},
       3 versions of d:four, all versions of d:five between {start} and {stop} from table where rowkey <= {maxId}"""
     val tableName = "table"
-    val family = Bytes.toBytesBinary("d")
+    val family = "d"
     val expectedColumns = List(
-      Column(family, Bytes.toBytesBinary("one")),
-      Column(family, Bytes.toBytesBinary("two"), QueryVersions.One),
-      Column(family, Bytes.toBytesBinary("three"), QueryVersions(2), Some(("start", "stop"))),
-      Column(family, Bytes.toBytesBinary("four"), QueryVersions(3)),
-      Column(family, Bytes.toBytesBinary("five"), QueryVersions.All, Some(("start", "stop"))))
+      Column(family, "one"),
+      Column(family, "two", QueryVersions.One),
+      Column(family, "three", QueryVersions(2), Some(("start", "stop"))),
+      Column(family, "four", QueryVersions(3)),
+      Column(family, "five", QueryVersions.All, Some(("start", "stop"))))
     val expectedRowConstraint = RowConstraint("<=", "maxId")
     // "stable identifier required", so make a new val to use
     val parserVal = parser
