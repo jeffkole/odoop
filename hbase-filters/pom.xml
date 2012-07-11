@@ -121,7 +121,7 @@
                         <jvmArg>-Xms64m</jvmArg>
                         <jvmArg>-Xmx1024m</jvmArg>
                     </jvmArgs>
-                    <sendJavaToScalac>false</sendJavaToScalac>
+                    <sendJavaToScalac>true</sendJavaToScalac>
                     <recompileMode>modified-only</recompileMode>
                 </configuration>
             </plugin>
