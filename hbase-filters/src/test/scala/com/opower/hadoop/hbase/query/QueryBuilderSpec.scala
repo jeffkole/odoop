@@ -11,6 +11,8 @@ import org.scalatest.GivenWhenThen
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 
+import scala.collection.JavaConverters._
+
 @RunWith(classOf[JUnitRunner])
 class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen with ShouldMatchers {
   implicit def string2BinaryByteArray(string : String) : Array[Byte] = {
@@ -67,15 +69,28 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       then("the scan should have columns added")
       val familyMap = scan.getFamilyMap
       familyMap should have size (1)
-      val qualifiers = familyMap.get("family")
+      val qualifiers = familyMap.get(Bytes.toBytesBinary("family"))
       qualifiers should have size (2)
-      qualifiers should contain (string2BinaryByteArray("one")) // unclear to me why the implicit isn't picked up here
-      qualifiers should contain (string2BinaryByteArray("two"))
+      // comparison of byte arrays does not work well, so convert all to strings first
+      val stringQualifiers = qualifiers.asScala.map(Bytes.toStringBinary(_))
+      stringQualifiers should contain ("one")
+      stringQualifiers should contain ("two")
     }
 
+    // the scan time range must not be set as well
     it("should add timestamp filters for columns that have timestamps specified") (pending)
 
+    // the scan versions must be set to max versions
     it("should add version filters for columns that have versions specified") (pending)
 
+    it("should add a start row for a >= rowkey constraint") (pending)
+
+    it("should add a stop row for a < rowkey constraint") (pending)
+
+    it("should add a start and stop row for a = rowkey constraint") (pending)
+
+    it("should add a start row and a rowkey filter for a > rowkey constraint") (pending)
+
+    it("should add a stop row and a rowkey filter for a <= rowkey constraint") (pending)
   }
 }

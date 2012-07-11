@@ -45,6 +45,9 @@ class QueryBuilder(query : String) {
   protected[query] def doPlanScan(parameters : immutable.Map[String, Array[Byte]],
                                   timestamps : immutable.Map[String, Long]) : Scan = {
     val scan = new Scan
+    for (column <- this.columns) {
+      scan.addColumn(column.family, column.qualifier)
+    }
     scan
   }
 
