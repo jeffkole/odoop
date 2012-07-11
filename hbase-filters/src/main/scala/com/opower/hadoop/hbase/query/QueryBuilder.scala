@@ -1,5 +1,6 @@
 package com.opower.hadoop.hbase.query
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.Map
 
@@ -35,8 +36,16 @@ class QueryBuilder(query : String) {
     this.columns
   }
 
+  protected[query] def getColumnList : java.util.List[Column] = {
+    this.columns.asJava
+  }
+
   protected[query] def getRowConstraints : List[RowConstraint] = {
     this.rowConstraints
+  }
+
+  protected[query] def getRowConstraintList : java.util.List[Column] = {
+    this.rowConstraints.asJava
   }
 
   protected[query] def scan : QueryBuilder = {
