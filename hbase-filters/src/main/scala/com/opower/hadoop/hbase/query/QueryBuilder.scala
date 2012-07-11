@@ -7,7 +7,10 @@ object QueryBuilder {
   def parse(query : String) : QueryBuilder = {
     val builder = new QueryBuilder(query)
     val parser = new QueryParser(builder)
-    parser.parseAll(parser.query, query.toLowerCase)
+    parser.parseAll(parser.query, query.toLowerCase) match {
+      case parser.Failure(msg, next) => throw new IllegalArgumentException(msg)
+      case _ => // success! so carry on
+    }
     builder
   }
 }
