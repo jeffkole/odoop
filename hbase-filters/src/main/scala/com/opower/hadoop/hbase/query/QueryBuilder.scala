@@ -44,7 +44,7 @@ class QueryBuilder(query : String) {
     this.rowConstraints
   }
 
-  protected[query] def getRowConstraintList : java.util.List[Column] = {
+  protected[query] def getRowConstraintList : java.util.List[RowConstraint] = {
     this.rowConstraints.asJava
   }
 
