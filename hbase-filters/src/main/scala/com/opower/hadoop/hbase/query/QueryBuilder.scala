@@ -1,8 +1,10 @@
 package com.opower.hadoop.hbase.query
 
+import org.apache.hadoop.hbase.client.Scan
+
 import scala.collection.JavaConverters._
-import scala.collection.mutable.HashMap
-import scala.collection.mutable.Map
+import scala.collection.mutable
+import scala.collection.immutable
 
 object QueryBuilder {
   def parse(query : String) : QueryBuilder = {
@@ -22,7 +24,29 @@ class QueryBuilder(query : String) {
   private var columns : List[Column] = Nil
   private var rowConstraints : List[RowConstraint] = Nil
 
-  private var namedParameters : Map[String, Any] = new HashMap[String, Any]
+  private var namedParameters : mutable.Map[String, Any] = new mutable.HashMap[String, Any]
+
+  /**
+   * Construct a {@link Scan} given the internal state of the builder and the query parameters
+   * and timestamps.  This method exists for interoperability with Java, so the parameter types
+   * are Java types.  The meat of the work occurs in {@link #doPlanScan}, which takes native
+   * Scala types.
+   */
+  protected[query] def planScan(parameters : java.util.Map[String, Array[Byte]],
+                                timestamps : java.util.Map[String, java.lang.Long]) : Scan = {
+    val paramBuilder = Map.newBuilder[String, Array[Byte]]
+    paramBuilder ++= parameters.asScala
+    val timestampBuilder = Map.newBuilder[String, Long]
+    timestampBuilder ++= timestamps.asScala.asInstanceOf[TraversableOnce[(String, Long)]]
+
+    this.doPlanScan(paramBuilder.result, timestampBuilder.result)
+  }
+
+  protected[query] def doPlanScan(parameters : immutable.Map[String, Array[Byte]],
+                                  timestamps : immutable.Map[String, Long]) : Scan = {
+    val scan = new Scan
+    scan
+  }
 
   protected[query] def getTableName : Option[String] = {
     this.tableName
@@ -36,16 +60,8 @@ class QueryBuilder(query : String) {
     this.columns
   }
 
-  protected[query] def getColumnList : java.util.List[Column] = {
-    this.columns.asJava
-  }
-
   protected[query] def getRowConstraints : List[RowConstraint] = {
     this.rowConstraints
-  }
-
-  protected[query] def getRowConstraintList : java.util.List[RowConstraint] = {
-    this.rowConstraints.asJava
   }
 
   protected[query] def scan : QueryBuilder = {

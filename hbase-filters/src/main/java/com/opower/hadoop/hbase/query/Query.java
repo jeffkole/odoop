@@ -1,5 +1,7 @@
 package com.opower.hadoop.hbase.query;
 
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.math.BigDecimal;
@@ -23,6 +25,8 @@ public class Query {
     }
 
     public ResultScanner scan() {
+        Scan scan = this.queryBuilder.planScan(this.parameters, this.timestamps);
+        return null;
     }
 
     public Query setTimestamp(String parameter, long timestamp) {
