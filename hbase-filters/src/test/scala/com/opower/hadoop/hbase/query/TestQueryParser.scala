@@ -232,6 +232,16 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   }
 
   @Test
+  def testScanClauseMatchesAllColumns() {
+    val scanClause = "scan"
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getColumns should be ('empty)
+    runSuccessfulParse[List[Column]](parser, parser.scanClause, scanClause, List())
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getColumns should be ('empty)
+  }
+
+  @Test
   def testScanClauseMatchesMultipleColumns() {
     val scanClause = "scan all versions of d:one, d:two, 3 versions of d:three"
     val family = "d"
@@ -293,6 +303,24 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     this.builder.getColumns should equal (expectedColumns.reverse)
     this.builder.getRowConstraints should not be ('empty)
     this.builder.getRowConstraints.head should equal (expectedRowConstraint)
+  }
+
+  @Test
+  def testMinimalQueryMatches() {
+    val query = "scan from table"
+
+    val parserVal = parser
+    val expectedResult = new parserVal.~(new parserVal.~(List(), "table"), None)
+
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getTableName should be ('empty)
+    this.builder.getColumns should be ('empty)
+    this.builder.getRowConstraints should be ('empty)
+    runSuccessfulParse[Any](parser, parser.query, query, expectedResult)
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getTableName.get should equal ("table")
+    this.builder.getColumns should be ('empty)
+    this.builder.getRowConstraints should be ('empty)
   }
 
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
