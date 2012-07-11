@@ -323,6 +323,18 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     this.builder.getRowConstraints should be ('empty)
   }
 
+  @Test
+  def testInvalidQueryFromOnly() {
+    val query = "from table"
+    runFailedParse[Any](parser, parser.query, query)
+  }
+
+  @Test
+  def testInvalidQuerySelectAndWhere() {
+    val query = "scan where rowkey = {id}"
+    runFailedParse[Any](parser, parser.query, query)
+  }
+
   // Cannot have a path-dependent type of `parser.Parser[T]` in the parameter type definition, but we need that
   // type to match the parameter types of `parser.parseAll`, so the cast is required.
   private def runSuccessfulParse[T](parser : QueryParser, term : QueryParser#Parser[T], input : String, expected : T) {
