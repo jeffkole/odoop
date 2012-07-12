@@ -58,8 +58,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
     }
 
     it("should add all columns in the query to the scan") {
-      given("a scan with two columns")
-      builder.scan
+      given("a builder with two columns")
       builder.addColumnDefinition(Column("family", "one"))
       builder.addColumnDefinition(Column("family", "two"))
 
@@ -83,11 +82,49 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
     // the scan versions must be set to max versions
     it("should add version filters for columns that have versions specified") (pending)
 
-    it("should add a start row for a >= rowkey constraint") (pending)
+    it("should add a start row for a >= rowkey constraint") {
+      val id = "id"
+      val idValue = Array[Byte](0xF)
 
-    it("should add a stop row for a < rowkey constraint") (pending)
+      given("a builder with a >= rowkey constraint")
+      builder.addConstraint(RowConstraint(">=", id))
 
-    it("should add a start and stop row for a = rowkey constraint") (pending)
+      when("a scan is planned")
+      val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
+
+      then("the scan should have a start row set")
+      scan.getStartRow should equal (idValue)
+    }
+
+    it("should add a stop row for a < rowkey constraint") {
+      val id = "id"
+      val idValue = Array[Byte](0xF)
+
+      given("a builder with a < rowkey constraint")
+      builder.addConstraint(RowConstraint("<", id))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
+
+      then("the scan should have a stop row set")
+      scan.getStopRow should equal (idValue)
+    }
+
+    it("should add a start and stop row for a = rowkey constraint") {
+      val id = "id"
+      val idValue = Array[Byte](0xF)
+      val stopValue = Array[Byte](0xF, 0x0)
+
+      given("a builder with a = rowkey constraint")
+      builder.addConstraint(RowConstraint("=", id))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
+
+      then("the scan should have a start and stop row set")
+      scan.getStartRow should equal (idValue)
+      scan.getStopRow should equal (stopValue)
+    }
 
     it("should add a start row and a rowkey filter for a > rowkey constraint") (pending)
 

@@ -1,6 +1,7 @@
 package com.opower.hadoop.hbase.query
 
 import org.apache.hadoop.hbase.client.Scan
+import org.apache.hadoop.hbase.util.Bytes
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -19,6 +20,8 @@ object QueryBuilder {
 }
 
 class QueryBuilder(query : String) {
+  private val zeroByte = Array[Byte](0x0)
+
   private var tableName : Option[String] = None
   private var queryOperation : Option[QueryOperation.Value] = None
   private var columns : List[Column] = Nil
@@ -47,6 +50,19 @@ class QueryBuilder(query : String) {
     val scan = new Scan
     for (column <- this.columns) {
       scan.addColumn(column.family, column.qualifier)
+    }
+    for (rowConstraint <- this.rowConstraints) {
+      rowConstraint match {
+        case RowConstraint(">=", paramName) => scan.setStartRow(parameters(paramName))
+        case RowConstraint("<",  paramName) => scan.setStopRow(parameters(paramName))
+        case RowConstraint("=",  paramName) => {
+          val startRow = parameters(paramName)
+          val stopRow = Bytes.add(startRow, zeroByte)
+          scan.setStartRow(startRow)
+          scan.setStopRow(stopRow)
+        }
+        case _ => // uh?
+      }
     }
     scan
   }
