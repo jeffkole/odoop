@@ -112,6 +112,32 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
     // the scan versions must be set to max versions
     it("should add version filters for columns that have versions specified") (pending)
 
+    it("should set the max versions on the scan to the max across all columns") {
+      given("a builder with columns with versions set")
+      builder.addColumnDefinition(Column("family", "one")) // default versions is 1
+      builder.addColumnDefinition(Column("family", "two", QueryVersions(2)))
+      builder.addColumnDefinition(Column("family", "three", QueryVersions(3)))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should have max versions set")
+      scan.getMaxVersions should equal(3)
+    }
+
+    it("should set the max versions on the scan to the max across all columns including 'all'") {
+      given("a builder with columns with versions set")
+      builder.addColumnDefinition(Column("family", "one")) // default versions is 1
+      builder.addColumnDefinition(Column("family", "all", QueryVersions.All))
+      builder.addColumnDefinition(Column("family", "three", QueryVersions(3)))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should have max versions set")
+      scan.getMaxVersions should equal(QueryVersions.All.numVersions)
+    }
+
     it("should add a start row for a >= rowkey constraint") {
       val id = "id"
       val idValue = Array[Byte](0xF)
