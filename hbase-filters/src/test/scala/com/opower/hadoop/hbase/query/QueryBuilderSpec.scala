@@ -138,6 +138,16 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getMaxVersions should equal(QueryVersions.All.numVersions)
     }
 
+    it("should leave max versions alone with no columns defined") {
+      given("a builder with no columns set")
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should have the default versions set")
+      scan.getMaxVersions should equal(1)
+    }
+
     it("should add a start row for a >= rowkey constraint") {
       val id = "id"
       val idValue = Array[Byte](0xF)
