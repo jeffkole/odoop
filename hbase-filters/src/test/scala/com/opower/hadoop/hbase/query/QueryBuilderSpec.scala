@@ -79,6 +79,36 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
     // the scan time range must not be set as well
     it("should add timestamp filters for columns that have timestamps specified") (pending)
 
+    it("should set the timerange on the scan if all columns have timeranges set") {
+      given("a builder with multiple columns with timeranges set")
+      builder.addColumnDefinition(Column("family", "one", QueryVersions.One, Some(("start1", "stop1"))))
+      builder.addColumnDefinition(Column("family", "two", QueryVersions.One, Some(("start2", "stop2"))))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters,
+        Map("start1" -> 100L, "stop1" -> 500L,
+            "start2" -> 300L, "stop2" -> 800L))
+
+      then("the scan should have a timerange that covers all column timeranges")
+      scan.getTimeRange.getMin should equal (100L)
+      scan.getTimeRange.getMax should equal (800L)
+    }
+
+    it("should not set the timerange on the scan if there is a mix of timeranges on columns") {
+      given("a builder with some columns with timestamps and some without")
+      builder.addColumnDefinition(Column("family", "one"))
+      builder.addColumnDefinition(Column("family", "two", QueryVersions.One, Some(("start", "stop"))))
+      builder.addColumnDefinition(Column("family", "three"))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, Map("start" -> 100L, "stop" -> 500L))
+
+      then("the scan should have no timerange set")
+      // Scan sets a default TimeRange for 'allTime', so that needs to be checked explicitly
+      scan.getTimeRange.getMin should equal (0L)
+      scan.getTimeRange.getMax should equal (Long.MaxValue)
+    }
+
     // the scan versions must be set to max versions
     it("should add version filters for columns that have versions specified") (pending)
 
