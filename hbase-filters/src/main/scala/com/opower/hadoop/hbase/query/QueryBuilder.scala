@@ -1,6 +1,9 @@
 package com.opower.hadoop.hbase.query
 
 import org.apache.hadoop.hbase.client.Scan
+import org.apache.hadoop.hbase.filter.BinaryComparator
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
+import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
 
 import scala.collection.JavaConverters._
@@ -60,6 +63,15 @@ class QueryBuilder(query : String) {
           val stopRow = Bytes.add(startRow, zeroByte)
           scan.setStartRow(startRow)
           scan.setStopRow(stopRow)
+        }
+        case RowConstraint(">",  paramName) => {
+          val startRow = parameters(paramName)
+          scan.setStartRow(startRow)
+          scan.setFilter(new RowFilter(CompareOp.GREATER, new BinaryComparator(startRow)))
+        }
+        case RowConstraint("<=", paramName) => {
+          val stopRow = parameters(paramName)
+          scan.setFilter(new RowFilter(CompareOp.LESS_OR_EQUAL, new BinaryComparator(stopRow)))
         }
         case _ => // uh?
       }

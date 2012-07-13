@@ -1,6 +1,7 @@
 package com.opower.hadoop.hbase.query
 
 import org.apache.hadoop.hbase.client.Scan
+import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
 
 import org.junit.runner.RunWith
@@ -192,8 +193,38 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getStopRow should equal (stopValue)
     }
 
-    it("should add a start row and a rowkey filter for a > rowkey constraint") (pending)
+    it("should add a start row and a rowkey filter for a > rowkey constraint") {
+      val id = "id"
+      val idValue = Array[Byte](0xF)
 
-    it("should add a stop row and a rowkey filter for a <= rowkey constraint") (pending)
+      given("a builder with a > rowkey constraint")
+      builder.addConstraint(RowConstraint(">", id))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
+
+      then("the scan should have a start row and a rowkey filter set")
+      scan.getStartRow should equal (idValue)
+      scan.hasFilter should be (true)
+      scan.getFilter.isInstanceOf[RowFilter] should be (true)
+      // TODO: how can we inspect the details of the filter?
+    }
+
+    it("should add a rowkey filter for a <= rowkey constraint") {
+      val id = "id"
+      val idValue = Array[Byte](0xF)
+
+      given("a builder with a <= rowkey constraint")
+      builder.addConstraint(RowConstraint("<=", id))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
+
+      then("the scan should have a stop row and a rowkey filter set")
+      scan.getStopRow should have length (0)
+      scan.hasFilter should be (true)
+      scan.getFilter.isInstanceOf[RowFilter] should be (true)
+      // TODO: how can we inspect the details of the filter?
+    }
   }
 }
