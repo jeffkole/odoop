@@ -1,6 +1,7 @@
 package com.opower.hadoop.hbase.query
 
 import org.apache.hadoop.hbase.client.Scan
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter
 import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
 
@@ -223,8 +224,9 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       then("the scan should have a stop row and a rowkey filter set")
       scan.getStopRow should have length (0)
       scan.hasFilter should be (true)
-      scan.getFilter.isInstanceOf[RowFilter] should be (true)
-      // TODO: how can we inspect the details of the filter?
+      scan.getFilter.isInstanceOf[InclusiveStopFilter] should be (true)
+      val filter = scan.getFilter.asInstanceOf[InclusiveStopFilter]
+      filter.getStopRowKey.deep should equal (idValue.deep)
     }
   }
 }

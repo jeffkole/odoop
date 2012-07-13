@@ -3,6 +3,7 @@ package com.opower.hadoop.hbase.query
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.BinaryComparator
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter
 import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
 
@@ -69,10 +70,7 @@ class QueryBuilder(query : String) {
           scan.setStartRow(startRow)
           scan.setFilter(new RowFilter(CompareOp.GREATER, new BinaryComparator(startRow)))
         }
-        case RowConstraint("<=", paramName) => {
-          val stopRow = parameters(paramName)
-          scan.setFilter(new RowFilter(CompareOp.LESS_OR_EQUAL, new BinaryComparator(stopRow)))
-        }
+        case RowConstraint("<=", paramName) => scan.setFilter(new InclusiveStopFilter(parameters(paramName)))
         case _ => // uh?
       }
     }
