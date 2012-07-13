@@ -1,6 +1,7 @@
 package com.opower.hadoop.hbase.query
 
 import org.apache.hadoop.hbase.client.Scan
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter
 import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
@@ -208,7 +209,9 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getStartRow should equal (idValue)
       scan.hasFilter should be (true)
       scan.getFilter.isInstanceOf[RowFilter] should be (true)
-      // TODO: how can we inspect the details of the filter?
+      val filter = scan.getFilter.asInstanceOf[RowFilter]
+      filter.getOperator should equal (CompareOp.GREATER)
+      filter.getComparator.getValue should equal (idValue)
     }
 
     it("should add a rowkey filter for a <= rowkey constraint") {
@@ -226,7 +229,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.hasFilter should be (true)
       scan.getFilter.isInstanceOf[InclusiveStopFilter] should be (true)
       val filter = scan.getFilter.asInstanceOf[InclusiveStopFilter]
-      filter.getStopRowKey.deep should equal (idValue.deep)
+      filter.getStopRowKey should equal (idValue)
     }
   }
 }
