@@ -133,8 +133,8 @@ class QueryBuilder(query : String) {
     }
   }
 
-  protected[query] def getTableName : Option[String] = {
-    this.tableName
+  protected[query] def getTableName : String = {
+    this.tableName.orNull
   }
 
   protected[query] def getQueryOperation : Option[QueryOperation.Value] = {

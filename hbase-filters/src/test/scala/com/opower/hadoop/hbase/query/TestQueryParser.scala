@@ -137,9 +137,9 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   @Test
   def testFromClauseMatches() {
     val expectedTableName = "tableName"
-    this.builder.getTableName should be ('empty)
+    this.builder.getTableName should be (null)
     runSuccessfulParse[String](parser, parser.fromClause, "from tableName", expectedTableName)
-    this.builder.getTableName.get should equal (expectedTableName)
+    this.builder.getTableName should equal (expectedTableName)
   }
 
   @Test
@@ -308,12 +308,12 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     val expectedResult = new parserVal.~(new parserVal.~(expectedColumns, tableName), Some(expectedRowConstraint))
 
     this.builder.getQueryOperation should be ('empty)
-    this.builder.getTableName should be ('empty)
+    this.builder.getTableName should be (null)
     this.builder.getColumns should be ('empty)
     this.builder.getRowConstraints should be ('empty)
     runSuccessfulParse[Any](parser, parser.query, query, expectedResult)
     this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
-    this.builder.getTableName.get should equal (tableName)
+    this.builder.getTableName should equal (tableName)
     this.builder.getColumns should not be ('empty)
     this.builder.getColumns should equal (expectedColumns.reverse)
     this.builder.getRowConstraints should not be ('empty)
@@ -328,12 +328,12 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     val expectedResult = new parserVal.~(new parserVal.~(List(), "table"), None)
 
     this.builder.getQueryOperation should be ('empty)
-    this.builder.getTableName should be ('empty)
+    this.builder.getTableName should be (null)
     this.builder.getColumns should be ('empty)
     this.builder.getRowConstraints should be ('empty)
     runSuccessfulParse[Any](parser, parser.query, query, expectedResult)
     this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
-    this.builder.getTableName.get should equal ("table")
+    this.builder.getTableName should equal ("table")
     this.builder.getColumns should be ('empty)
     this.builder.getRowConstraints should be ('empty)
   }

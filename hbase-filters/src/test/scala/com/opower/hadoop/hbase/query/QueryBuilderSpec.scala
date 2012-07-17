@@ -35,14 +35,13 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
 
     it("should store a table name") {
       given("no table name")
-      builder.getTableName should be ('empty)
+      builder.getTableName should be (null)
 
       when("a table name is set")
       builder.setTableName("tableName")
 
       then("the table name should be stored")
-      builder.getTableName should not be ('empty)
-      builder.getTableName.get should equal ("tableName")
+      builder.getTableName should equal ("tableName")
     }
 
   }
