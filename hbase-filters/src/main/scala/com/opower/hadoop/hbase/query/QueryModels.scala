@@ -17,7 +17,9 @@ object QueryVersions {
   val One = new QueryVersions(1)
 }
 
-case class RowConstraint(operator : String, parameter : String)
+sealed abstract class RowConstraint
+case class SingleRowConstraint(operator : String, parameter : String) extends RowConstraint
+case class BetweenRowConstraint(start : String, stop : String) extends RowConstraint
 
 case class Column(family    : Array[Byte]              = Array[Byte](),
                   qualifier : Array[Byte]              = Array[Byte](),

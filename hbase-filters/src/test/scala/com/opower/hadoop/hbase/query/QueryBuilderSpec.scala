@@ -156,7 +156,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val idValue = Array[Byte](0xF)
 
       given("a builder with a >= rowkey constraint")
-      builder.addConstraint(RowConstraint(">=", id))
+      builder.addConstraint(SingleRowConstraint(">=", id))
 
       when("a scan is planned")
       val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
@@ -170,7 +170,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val idValue = Array[Byte](0xF)
 
       given("a builder with a < rowkey constraint")
-      builder.addConstraint(RowConstraint("<", id))
+      builder.addConstraint(SingleRowConstraint("<", id))
 
       when("a scan is planned")
       val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
@@ -185,7 +185,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val stopValue = Array[Byte](0xF, 0x0)
 
       given("a builder with a = rowkey constraint")
-      builder.addConstraint(RowConstraint("=", id))
+      builder.addConstraint(SingleRowConstraint("=", id))
 
       when("a scan is planned")
       val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
@@ -200,7 +200,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val idValue = Array[Byte](0xF)
 
       given("a builder with a > rowkey constraint")
-      builder.addConstraint(RowConstraint(">", id))
+      builder.addConstraint(SingleRowConstraint(">", id))
 
       when("a scan is planned")
       val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
@@ -219,7 +219,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val idValue = Array[Byte](0xF)
 
       given("a builder with a <= rowkey constraint")
-      builder.addConstraint(RowConstraint("<=", id))
+      builder.addConstraint(SingleRowConstraint("<=", id))
 
       when("a scan is planned")
       val scan = builder.doPlanScan(Map(id -> idValue), noTimestamps)
@@ -230,6 +230,23 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getFilter.isInstanceOf[InclusiveStopFilter] should be (true)
       val filter = scan.getFilter.asInstanceOf[InclusiveStopFilter]
       filter.getStopRowKey should equal (idValue)
+    }
+
+    it("should add a start and stop key for a between rowkey constraint") {
+      val lowParam = "low"
+      val highParam = "high"
+      val lowVal = Array[Byte](0xA, 0xB, 0xC)
+      val highVal = Array[Byte](0xF, 0xD, 0xE)
+
+      given("a builder with a between rowkey constraint")
+      builder.addConstraint(BetweenRowConstraint("low", "high"))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(Map(lowParam -> lowVal, highParam -> highVal), noTimestamps)
+
+      then("the scan should have a start row and stop row set")
+      scan.getStartRow should equal (lowVal)
+      scan.getStopRow should equal (highVal)
     }
   }
 }

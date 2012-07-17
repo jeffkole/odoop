@@ -83,12 +83,12 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test
   def testRowKeyConstraintMatches() {
-    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey = {id}", RowConstraint("=", "id"))
+    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey = {id}", SingleRowConstraint("=", "id"))
   }
 
   @Test
   def testRowKeyConstraintWhitespace() {
-    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey<={ id }", RowConstraint("<=", "id"))
+    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey<={ id }", SingleRowConstraint("<=", "id"))
   }
 
   @Test
@@ -97,10 +97,25 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
   }
 
   @Test
+  def testRowKeyBetweenMatches() {
+    runSuccessfulParse[RowConstraint](parser, parser.rowKeyConstraint, "rowkey between {X} and {Y}",
+      BetweenRowConstraint("X", "Y"))
+  }
+
+  @Test
   def testWhereClauseMatches() {
-    val expectedConstraint = RowConstraint("=", "id")
+    val expectedConstraint = SingleRowConstraint("=", "id")
     this.builder.getRowConstraints should be ('empty)
     runSuccessfulParse[RowConstraint](parser, parser.whereClause, "where rowkey = {id}", expectedConstraint)
+    this.builder.getRowConstraints should not be ('empty)
+    this.builder.getRowConstraints.head should equal (expectedConstraint)
+  }
+
+  @Test
+  def testWhereClauseMatchesBetween() {
+    val expectedConstraint = BetweenRowConstraint("low", "high")
+    this.builder.getRowConstraints should be ('empty)
+    runSuccessfulParse[RowConstraint](parser, parser.whereClause, "where rowkey between {low} and {high}", expectedConstraint)
     this.builder.getRowConstraints should not be ('empty)
     this.builder.getRowConstraints.head should equal (expectedConstraint)
   }
@@ -287,7 +302,7 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
       Column(family, "three", QueryVersions(2), Some(("start", "stop"))),
       Column(family, "four", QueryVersions(3)),
       Column(family, "five", QueryVersions.All, Some(("start", "stop"))))
-    val expectedRowConstraint = RowConstraint("<=", "maxId")
+    val expectedRowConstraint = SingleRowConstraint("<=", "maxId")
     // "stable identifier required", so make a new val to use
     val parserVal = parser
     val expectedResult = new parserVal.~(new parserVal.~(expectedColumns, tableName), Some(expectedRowConstraint))

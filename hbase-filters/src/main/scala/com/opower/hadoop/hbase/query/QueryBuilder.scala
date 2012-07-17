@@ -57,20 +57,25 @@ class QueryBuilder(query : String) {
     }
     for (rowConstraint <- this.rowConstraints) {
       rowConstraint match {
-        case RowConstraint(">=", paramName) => scan.setStartRow(parameters(paramName))
-        case RowConstraint("<",  paramName) => scan.setStopRow(parameters(paramName))
-        case RowConstraint("=",  paramName) => {
+        // TODO: check parameter existence!
+        case SingleRowConstraint(">=", paramName) => scan.setStartRow(parameters(paramName))
+        case SingleRowConstraint("<",  paramName) => scan.setStopRow(parameters(paramName))
+        case SingleRowConstraint("=",  paramName) => {
           val startRow = parameters(paramName)
           val stopRow = Bytes.add(startRow, zeroByte)
           scan.setStartRow(startRow)
           scan.setStopRow(stopRow)
         }
-        case RowConstraint(">",  paramName) => {
+        case SingleRowConstraint(">",  paramName) => {
           val startRow = parameters(paramName)
           scan.setStartRow(startRow)
           scan.setFilter(new RowFilter(CompareOp.GREATER, new BinaryComparator(startRow)))
         }
-        case RowConstraint("<=", paramName) => scan.setFilter(new InclusiveStopFilter(parameters(paramName)))
+        case SingleRowConstraint("<=", paramName) => scan.setFilter(new InclusiveStopFilter(parameters(paramName)))
+        case BetweenRowConstraint(startParamName, stopParamName) => {
+          scan.setStartRow(parameters(startParamName))
+          scan.setStopRow(parameters(stopParamName))
+        }
         case _ => // uh?
       }
     }

@@ -62,10 +62,14 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
     c
   }
 
-  // TODO: Support "rowkey between X and Y" syntax
-  def rowKeyConstraint : Parser[RowConstraint] = "rowkey" ~> rowKeyOperator ~ parameter ^^ {
-    case o ~ p => RowConstraint(o, p)
-  }
+  def rowKeyConstraint : Parser[RowConstraint] = "rowkey" ~> (
+    ("between" ~ parameter ~ "and" ~ parameter ^^ {
+        case _ ~ a ~ _ ~ b => BetweenRowConstraint(a, b)
+      }) |
+    (rowKeyOperator ~ parameter ^^ {
+        case o ~ p => SingleRowConstraint(o, p)
+      }))
+
   // Longer patterns must come first (ie, <= and >= before < and >) so that the match can be greedy
   def rowKeyOperator : Parser[String] = "<=" | ">=" | "<" | ">" | "="
 

@@ -15,7 +15,7 @@ The currently implemented grammar is as follows:
     qualifier         := /(\w|0x[0-9a-fA-F]{2})+/
     timeRange         := "between" parameter "and" parameter
     tableName         := /\w[\w\-.]*/
-    rowKeyConstraint  := "rowkey" rowKeyOperator parameter
+    rowKeyConstraint  := ( "rowkey" rowKeyOperator parameter | "rowkey between" parameter "and" parameter )
     rowKeyOperator    := "<" | "<=" | ">" | ">=" | "="
     parameter         := "{" /\w*/ "}"
     positiveNumber    := /[1-9]\d*/
