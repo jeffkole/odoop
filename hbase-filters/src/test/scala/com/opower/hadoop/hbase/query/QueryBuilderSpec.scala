@@ -249,4 +249,99 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getStopRow should equal (highVal)
     }
   }
+
+  describe("A failed planned scan") {
+
+    it("should throw an exception if rowkey constraint parameters are not set") {
+      given("a builder with a rowkey constraint")
+      builder.addConstraint(SingleRowConstraint("=", "id"))
+
+      when("a scan is planned")
+      val exception = evaluating { builder.doPlanScan(noParameters, noTimestamps) } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing parameter")
+    }
+
+    it("should throw an exception if neither rowkey between parameter is set") {
+      given("a builder with a rowkey between constraint")
+      builder.addConstraint(BetweenRowConstraint("low", "high"))
+
+      when("a scan is planned")
+      val exception = evaluating { builder.doPlanScan(noParameters, noTimestamps) } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing parameter")
+    }
+
+    it("should throw an exception if the first rowkey between parameter is not set") {
+      given("a builder with a rowkey between constraint")
+      builder.addConstraint(BetweenRowConstraint("low", "high"))
+
+      when("a scan is planned")
+      val exception = evaluating {
+        builder.doPlanScan(Map("high" -> Array[Byte]()), noTimestamps)
+      } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing parameter")
+    }
+
+    it("should throw an exception if the second rowkey between parameter is not set") {
+      given("a builder with a rowkey between constraint")
+      builder.addConstraint(BetweenRowConstraint("low", "high"))
+
+      when("a scan is planned")
+      val exception = evaluating {
+        builder.doPlanScan(Map("low" -> Array[Byte]()), noTimestamps)
+      } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing parameter")
+    }
+
+    it("should throw an exception if the column timestamps are not set") {
+      given("a builder with a column with a timerange")
+      builder.addColumnDefinition(Column("family", "qualifier", QueryVersions.One, Some(("start", "stop"))))
+
+      when("a scan is planned")
+      val exception = evaluating { builder.doPlanScan(noParameters, noTimestamps) } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing timestamp parameter")
+    }
+
+    it("should throw an exception if the first column timestamp is not set") {
+      given("a builder with a column with a timerange")
+      builder.addColumnDefinition(Column("family", "qualifier", QueryVersions.One, Some(("start", "stop"))))
+
+      when("a scan is planned")
+      val exception = evaluating {
+        builder.doPlanScan(noParameters, Map("stop" -> 100L))
+      } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing timestamp parameter")
+    }
+
+    it("should throw an exception if the second column timestamp is not set") {
+      given("a builder with a column with a timerange")
+      builder.addColumnDefinition(Column("family", "qualifier", QueryVersions.One, Some(("start", "stop"))))
+
+      when("a scan is planned")
+      val exception = evaluating {
+        builder.doPlanScan(noParameters, Map("start" -> 10L))
+      } should produce [IllegalArgumentException]
+
+      then("an exception should have been thrown")
+      exception should not be (null)
+      exception.getMessage should startWith ("Missing timestamp parameter")
+    }
+  }
 }

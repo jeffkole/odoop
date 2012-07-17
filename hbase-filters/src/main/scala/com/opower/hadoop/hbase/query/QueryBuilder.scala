@@ -51,13 +51,15 @@ class QueryBuilder(query : String) {
 
   protected[query] def doPlanScan(parameters : immutable.Map[String, Array[Byte]],
                                   timestamps : immutable.Map[String, Long]) : Scan = {
+    validateParameters(parameters)
+    validateTimestamps(timestamps)
+
     val scan = new Scan
     for (column <- this.columns) {
       scan.addColumn(column.family, column.qualifier)
     }
     for (rowConstraint <- this.rowConstraints) {
       rowConstraint match {
-        // TODO: check parameter existence!
         case SingleRowConstraint(">=", paramName) => scan.setStartRow(parameters(paramName))
         case SingleRowConstraint("<",  paramName) => scan.setStopRow(parameters(paramName))
         case SingleRowConstraint("=",  paramName) => {
@@ -76,7 +78,6 @@ class QueryBuilder(query : String) {
           scan.setStartRow(parameters(startParamName))
           scan.setStopRow(parameters(stopParamName))
         }
-        case _ => // uh?
       }
     }
     if (!this.columns.isEmpty) {
@@ -94,6 +95,42 @@ class QueryBuilder(query : String) {
       scan.setMaxVersions(this.columns.maxBy(_.versions.numVersions).versions.numVersions)
     }
     scan
+  }
+
+  private def validateParameters(parameters : immutable.Map[String, Array[Byte]]) : Unit = {
+    for (rowConstraint <- this.rowConstraints) {
+      rowConstraint match {
+        case SingleRowConstraint(_, paramName) => {
+          if (!parameters.contains(paramName)) {
+            throw new IllegalArgumentException("Missing parameter '%s' for rowkey constraint".format(paramName))
+          }
+        }
+        case BetweenRowConstraint(a, b) => {
+          if (!parameters.contains(a)) {
+            throw new IllegalArgumentException("Missing parameter '%s' for rowkey constraint".format(a))
+          }
+          if (!parameters.contains(b)) {
+            throw new IllegalArgumentException("Missing parameter '%s' for rowkey constraint".format(b))
+          }
+        }
+      }
+    }
+  }
+
+  private def validateTimestamps(timestamps : immutable.Map[String, Long]) : Unit = {
+    for (column <- this.columns) {
+      column match {
+        case Column(_, _, _, Some((a, b))) => {
+          if (!timestamps.contains(a)) {
+            throw new IllegalArgumentException("Missing timestamp parameter '%s' for column constraint".format(a))
+          }
+          if (!timestamps.contains(b)) {
+            throw new IllegalArgumentException("Missing timestamp parameter '%s' for column constraint".format(b))
+          }
+        }
+        case Column(_, _, _, None) => // If the timerange is not specified in the column, then all is good
+      }
+    }
   }
 
   protected[query] def getTableName : Option[String] = {
