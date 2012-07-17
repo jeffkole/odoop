@@ -63,7 +63,7 @@ Fetch all customers between IDs 50 and 100, exclusive:
 
 ## Example Usage
 
-    QueryPlanner planner = new QueryPlanner(HBaseConfiguration.create());
+    QueryPlanner planner = new QueryPlanner(new HTablePool(HBaseConfiguration.create()));
     Query query = planner.parse("scan from customer where rowkey = {id}");
     query.setInt("id", 42);
     ResultScanner scanner = query.scan();

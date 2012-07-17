@@ -1,10 +1,12 @@
 package com.opower.hadoop.hbase.query;
 
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,14 +21,22 @@ public class Query {
     private final Map<String, byte[]> parameters = new HashMap<String, byte[]>();
     private final Map<String, Long> timestamps = new HashMap<String, Long>();
 
+    private HTableInterface hTable;
+
     Query(DefaultQueryPlanner queryPlanner, QueryBuilder queryBuilder) {
         this.queryPlanner = queryPlanner;
         this.queryBuilder = queryBuilder;
     }
 
-    public ResultScanner scan() {
+    public void close() {
+        this.queryPlanner.putTable(this.hTable);
+        this.hTable = null;
+    }
+
+    public ResultScanner scan() throws IOException {
         Scan scan = this.queryBuilder.planScan(this.parameters, this.timestamps);
-        return null;
+        this.hTable = this.queryPlanner.getTable(this.queryBuilder.getTableName());
+        return this.hTable.getScanner(scan);
     }
 
     public Query setTimestamp(String parameter, long timestamp) {
