@@ -84,7 +84,7 @@ class QueryBuilder(query : String) {
       // pull out the min and max timestamps in order to set the timerange on the scan
       if (!timestamps.isEmpty) {
         // only set a timerange on the scan if all columns have timeranges defined themselves
-        val allColumnsHaveTimeRanges = !this.columns.exists(_.timeRange.equals(None))
+        val allColumnsHaveTimeRanges = !this.columns.exists(_.timeRange.isEmpty)
           if (allColumnsHaveTimeRanges) {
           val minTimestamp = timestamps.minBy(_._2)._2
           val maxTimestamp = timestamps.maxBy(_._2)._2
