@@ -26,7 +26,7 @@ public class DefaultQueryPlanner implements QueryPlanner {
     @Override
     public Query parse(String query) {
         QueryBuilder builder = QueryBuilder.parse(query);
-        return new Query(this, builder);
+        return new DefaultQuery(this, builder);
     }
 
     /**
