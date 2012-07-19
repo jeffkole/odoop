@@ -55,9 +55,9 @@ public class IntTestDefaultQueryPlanner {
     };
     // qualifier, num versions, timestamp start, timestamp interval
     private static final Object[][] QUALIFIERS = new Object[][] {
+        { "fiveValues",    5,    100L,  100, },
         { "oneValueA",     1,    100L,    0, },
         { "oneValueB",     1,  10000L,    0, },
-        { "fiveValues",    5,    100L,  100, },
         { "tenValuesA",   10,   1000L,   10, },
         { "tenValuesB",   10,   1000L, 1000, },
     };
@@ -69,6 +69,7 @@ public class IntTestDefaultQueryPlanner {
 
     private QueryPlanner queryPlanner;
 
+    // TODO: Move this to someplace more common, perhaps odoop-test
     private static final class StaticTableFactory implements HTableInterfaceFactory {
         private HTable table;
         private StaticTableFactory(HTable table) {
@@ -80,6 +81,54 @@ public class IntTestDefaultQueryPlanner {
         }
 
         public void releaseHTableInterface(HTableInterface table) {}
+    }
+
+    /**
+     * Returns an array similar to this (if "nectarine" were the only row passed in)
+        Object[][] expectedResults = new Object[][] {
+            { "nectarine", "familyA", "fiveValues",   500L, "nectarine-fiveValues-4" },
+            { "nectarine", "familyA", "oneValueA",    100L, "nectarine-oneValueA-0" },
+            { "nectarine", "familyA", "oneValueB",  10000L, "nectarine-oneValueB-0" },
+            { "nectarine", "familyA", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
+            { "nectarine", "familyA", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
+
+            { "nectarine", "familyB", "fiveValues",   500L, "nectarine-fiveValues-4" },
+            { "nectarine", "familyB", "oneValueA",    100L, "nectarine-oneValueA-0" },
+            { "nectarine", "familyB", "oneValueB",  10000L, "nectarine-oneValueB-0" },
+            { "nectarine", "familyB", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
+            { "nectarine", "familyB", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
+
+            { "nectarine", "familyC", "fiveValues",   500L, "nectarine-fiveValues-4" },
+            { "nectarine", "familyC", "oneValueA",    100L, "nectarine-oneValueA-0" },
+            { "nectarine", "familyC", "oneValueB",  10000L, "nectarine-oneValueB-0" },
+            { "nectarine", "familyC", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
+            { "nectarine", "familyC", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
+        };
+     *
+     */
+    private static Object[][] makeMostRecentExpectedResults(String... rows) {
+        Object[][] expectedResults = new Object[FAMILIES.length * rows.length * QUALIFIERS.length][5];
+        int resultIndex = 0;
+        for (int r = 0; r < rows.length; r++) {
+            String row = rows[r];
+            for (int f = 0; f < FAMILIES.length; f++) {
+                String family = Bytes.toString(FAMILIES[f]);
+                for (int q = 0; q < QUALIFIERS.length; q++) {
+                    Object[] qualifiers = QUALIFIERS[q];
+                    String qualifier = (String)qualifiers[0];
+                    int numVersions = (Integer)qualifiers[1];
+                    long start = (Long)qualifiers[2];
+                    int interval = (Integer)qualifiers[3];
+                    long version = start + ((numVersions - 1) * interval);
+                    String value = row + "-" + qualifier + "-" + (numVersions - 1);
+                    Object[] expectedResult = new Object[] {
+                        row, family, qualifier, version, value
+                    };
+                    expectedResults[resultIndex++] = expectedResult;
+                }
+            }
+        }
+        return expectedResults;
     }
 
     @BeforeClass
@@ -127,67 +176,48 @@ public class IntTestDefaultQueryPlanner {
     public void tearDown() throws Exception {
         this.queryPlanner.close();
     }
-/*
+
     @Test
     public void testSimpleScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME);
         // we expect only one version per qualifier
-        runScanAssertions(query, ROWS.length, 1 * QUALIFIERS.length * ROWS.length * FAMILIES.length);
+        runScanAssertions(query, makeMostRecentExpectedResults(ROWS), ROWS.length);
     }
-    */
 
     @Test
     public void testSingleRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey = {id}");
         query.setString("id", "nectarine");
-        Object[][] expectedResults = new Object[][] {
-            { "nectarine", "familyA", "fiveValues",   500L, "nectarine-fiveValues-4" },
-            { "nectarine", "familyA", "oneValueA",    100L, "nectarine-oneValueA-0" },
-            { "nectarine", "familyA", "oneValueB",  10000L, "nectarine-oneValueB-0" },
-            { "nectarine", "familyA", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
-            { "nectarine", "familyA", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
-
-            { "nectarine", "familyB", "fiveValues",   500L, "nectarine-fiveValues-4" },
-            { "nectarine", "familyB", "oneValueA",    100L, "nectarine-oneValueA-0" },
-            { "nectarine", "familyB", "oneValueB",  10000L, "nectarine-oneValueB-0" },
-            { "nectarine", "familyB", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
-            { "nectarine", "familyB", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
-
-            { "nectarine", "familyC", "fiveValues",   500L, "nectarine-fiveValues-4" },
-            { "nectarine", "familyC", "oneValueA",    100L, "nectarine-oneValueA-0" },
-            { "nectarine", "familyC", "oneValueB",  10000L, "nectarine-oneValueB-0" },
-            { "nectarine", "familyC", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
-            { "nectarine", "familyC", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
-        };
-        runScanAssertions(query, expectedResults, 1);
+        runScanAssertions(query, makeMostRecentExpectedResults("nectarine"), 1);
     }
-/*
+
     @Test
     public void testLessThanRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey < {id}");
         query.setString("id", "cherry");
-        runScanAssertions(query, 4, 1 * QUALIFIERS.length * 4 * FAMILIES.length);
+        runScanAssertions(query, makeMostRecentExpectedResults("apple", "apricot", "banana", "cantaloupe"), 4);
     }
 
     @Test
     public void testLessThanEqualRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey <= {id}");
         query.setString("id", "cherry");
-        runScanAssertions(query, 5, 1 * QUALIFIERS.length * 5 * FAMILIES.length);
+        runScanAssertions(query, makeMostRecentExpectedResults("apple", "apricot", "banana", "cantaloupe", "cherry"), 5);
     }
 
     @Test
     public void testGreaterThanRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey > {id}");
         query.setString("id", "cherry");
-        runScanAssertions(query, 5, 1 * QUALIFIERS.length * 5 * FAMILIES.length);
+        runScanAssertions(query, makeMostRecentExpectedResults("nectarine", "orange", "peach", "strawberry", "watermelon"), 5);
     }
 
     @Test
     public void testGreaterThanEqualRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey >= {id}");
         query.setString("id", "cherry");
-        runScanAssertions(query, 6, 1 * QUALIFIERS.length * 6 * FAMILIES.length);
+        runScanAssertions(query, makeMostRecentExpectedResults(
+                    "cherry", "nectarine", "orange", "peach", "strawberry", "watermelon"), 6);
     }
 
     @Test
@@ -195,7 +225,7 @@ public class IntTestDefaultQueryPlanner {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey between {low} and {high}");
         query.setString("low", "banana");
         query.setString("high", "orange");
-        runScanAssertions(query, 4, 1 * QUALIFIERS.length * 4 * FAMILIES.length);
+        runScanAssertions(query, makeMostRecentExpectedResults("banana", "cantaloupe", "cherry", "nectarine"), 4);
     }
 
     @Test
@@ -207,7 +237,7 @@ public class IntTestDefaultQueryPlanner {
             { "apple", "familyA", "fiveValues", 100L, "fiveValues0" },
         };
     }
-*/
+
     private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
@@ -216,23 +246,30 @@ public class IntTestDefaultQueryPlanner {
         try {
             scanner = query.scan();
             assertThat("scanner is not null", scanner, is(notNullValue()));
+            int resultIndex = 0;
             Result result = null;
             while ((result = scanner.next()) != null) {
-                rowCount++;
                 KeyValue[] keyValues = result.raw();
                 keyValueCount += keyValues.length;
                 for (int i = 0; i < keyValues.length; i++) {
-                    String expectedRowKey    = (String)expectedResults[i][0];
-                    String expectedFamily    = (String)expectedResults[i][1];
-                    String expectedQualifier = (String)expectedResults[i][2];
-                    long expectedTimestamp   = (Long)expectedResults[i][3];
-                    String expectedValue     = (String)expectedResults[i][4];
-                    assertThat("row key matches",   Bytes.toString(keyValues[i].getRow()),       is(expectedRowKey));
-                    assertThat("family matches",    Bytes.toString(keyValues[i].getFamily()),    is(expectedFamily));
-                    assertThat("qualifier matches", Bytes.toString(keyValues[i].getQualifier()), is(expectedQualifier));
-                    assertThat("timestamp matches", keyValues[i].getTimestamp(),                 is(expectedTimestamp));
-                    assertThat("value matches",     Bytes.toString(keyValues[i].getValue()),     is(expectedValue));
+                    String expectedRowKey    = (String)expectedResults[resultIndex][0];
+                    String expectedFamily    = (String)expectedResults[resultIndex][1];
+                    String expectedQualifier = (String)expectedResults[resultIndex][2];
+                    long expectedTimestamp   = (Long)expectedResults[resultIndex][3];
+                    String expectedValue     = (String)expectedResults[resultIndex][4];
+                    assertThat(rowCount + " row key matches",
+                            Bytes.toString(keyValues[i].getRow()),       is(expectedRowKey));
+                    assertThat(rowCount + " family matches",
+                            Bytes.toString(keyValues[i].getFamily()),    is(expectedFamily));
+                    assertThat(rowCount + " qualifier matches",
+                            Bytes.toString(keyValues[i].getQualifier()), is(expectedQualifier));
+                    assertThat(rowCount + " timestamp matches",
+                            keyValues[i].getTimestamp(),                 is(expectedTimestamp));
+                    assertThat(rowCount + " value matches",
+                            Bytes.toString(keyValues[i].getValue()),     is(expectedValue));
+                    resultIndex++;
                 }
+                rowCount++;
             }
         }
         finally {
