@@ -6,6 +6,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.AfterClass;
@@ -91,9 +92,14 @@ public class IntTestColumnVersionTimerangeFilter {
             { "row-B", "d", "qual-A", 5L, "value-A5" },
             { "row-B", "d", "qual-A", 4L, "value-A4" },
         };
+        runFilterAssertions(new ColumnVersionTimerangeFilter(FAMILY, Bytes.toBytes("qual-A"), 3),
+                expectedResults, 2);
+    }
+
+    private void runFilterAssertions(Filter filter, Object[][] expectedResults, int expectedNumRows) throws Exception {
         Scan scan = new Scan();
         scan.addFamily(FAMILY);
-        scan.setFilter(new ColumnVersionTimerangeFilter(FAMILY, Bytes.toBytes("qual-A"), 3));
+        scan.setFilter(filter);
         scan.setMaxVersions();
         int numRows = 0;
         int numKeyValues = 0;
@@ -116,7 +122,12 @@ public class IntTestColumnVersionTimerangeFilter {
             }
             numRows++;
         }
-        assertThat("number of rows matches", numRows, is(2));
+        assertThat("number of rows matches", numRows, is(expectedNumRows));
         assertThat("number of keyvalue matches", numKeyValues, is(expectedResults.length));
+    }
+
+    @Test
+    public void testTimeranges() throws Exception {
+
     }
 }
