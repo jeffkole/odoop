@@ -240,6 +240,23 @@ public class IntTestDefaultQueryPlanner {
         runScanAssertions(query, expectedResults, 1);
     }
 
+    @Test
+    public void testMultipleFamiliesAndQualifierScan() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan familyA:tenValuesB, familyB:oneValueA, familyC:fiveValues from " + TABLE_NAME + " where rowkey < {id}");
+        query.setString("id", "banana");
+        Object[][] expectedResults = new Object[][] {
+            { "apple", "familyA", "tenValuesB", 10000L, "apple-tenValuesB-9" },
+            { "apple", "familyB", "oneValueA",    100L, "apple-oneValueA-0" },
+            { "apple", "familyC", "fiveValues",   500L, "apple-fiveValues-4" },
+
+            { "apricot", "familyA", "tenValuesB", 10000L, "apricot-tenValuesB-9" },
+            { "apricot", "familyB", "oneValueA",    100L, "apricot-oneValueA-0" },
+            { "apricot", "familyC", "fiveValues",   500L, "apricot-fiveValues-4" },
+        };
+        runScanAssertions(query, expectedResults, 2);
+    }
+
     private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
