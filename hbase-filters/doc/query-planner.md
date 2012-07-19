@@ -2,7 +2,7 @@
 
 ## Query Grammar
 
-The currently implemented grammar is as follows:
+The currently implemented grammar is as follows (case sensitive):
 
     query             := selectClause fromClause [ whereClause ]
     selectClause      := scanClause

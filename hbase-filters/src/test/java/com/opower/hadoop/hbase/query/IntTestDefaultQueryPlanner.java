@@ -30,10 +30,10 @@ import static org.hamcrest.CoreMatchers.*;
  */
 @RunWith(HBaseTestRunner.class)
 public class IntTestDefaultQueryPlanner {
-    private static final String TABLE_NAME = IntTestDefaultQueryPlanner.class.getName().toLowerCase();
-    private static final String FAMILY_A = "family-a";
-    private static final String FAMILY_B = "family-b";
-    private static final String FAMILY_C = "family-c";
+    private static final String TABLE_NAME = IntTestDefaultQueryPlanner.class.getName();
+    private static final String FAMILY_A = "familyA";
+    private static final String FAMILY_B = "familyB";
+    private static final String FAMILY_C = "familyC";
 
     private static HBaseTestingUtility hbaseTestingUtility;
     private static HTable table;
@@ -80,11 +80,11 @@ public class IntTestDefaultQueryPlanner {
         };
         // qualifier, num versions, timestamp start, timestamp interval
         Object[][] columns = new Object[][] {
-            { "one-value-a",     1,    100L,    0, },
-            { "one-value-b",     1,  10000L,    0, },
-            { "five-values",     5,    100L,  100, },
-            { "ten-values-a",   10,   1000L,   10, },
-            { "ten-values-b",   10,   1000L, 1000, },
+            { "oneValueA",     1,    100L,    0, },
+            { "oneBalueB",     1,  10000L,    0, },
+            { "fiveValues",    5,    100L,  100, },
+            { "tenValuesA",   10,   1000L,   10, },
+            { "tenValuesB",   10,   1000L, 1000, },
         };
         table.setAutoFlush(false);
         for (byte[] family : families) {
