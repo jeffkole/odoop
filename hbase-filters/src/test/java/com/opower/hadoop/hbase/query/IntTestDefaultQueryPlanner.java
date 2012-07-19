@@ -20,8 +20,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.List;
-
 import com.opower.hadoop.hbase.test.HBaseTestRunner;
 
 import static org.junit.Assert.assertThat;
@@ -58,7 +56,7 @@ public class IntTestDefaultQueryPlanner {
     // qualifier, num versions, timestamp start, timestamp interval
     private static final Object[][] QUALIFIERS = new Object[][] {
         { "oneValueA",     1,    100L,    0, },
-        { "oneBalueB",     1,  10000L,    0, },
+        { "oneValueB",     1,  10000L,    0, },
         { "fiveValues",    5,    100L,  100, },
         { "tenValuesA",   10,   1000L,   10, },
         { "tenValuesB",   10,   1000L, 1000, },
@@ -104,7 +102,7 @@ public class IntTestDefaultQueryPlanner {
                     long start = (Long)qualifiers[i++];
                     int interval = (Integer)qualifiers[i++];
                     for (int v = 0; v < numVersions; v++) {
-                        byte[] value = Bytes.add(rowKey, Bytes.toBytes(Integer.toString(v)));
+                        byte[] value = Bytes.toBytes(row + "-" + qualifiers[0] + "-" + v);
                         put.add(family, qualifier, start + (v * interval), value);
                         numKeyValues++;
                     }
@@ -129,21 +127,41 @@ public class IntTestDefaultQueryPlanner {
     public void tearDown() throws Exception {
         this.queryPlanner.close();
     }
-
+/*
     @Test
     public void testSimpleScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME);
         // we expect only one version per qualifier
         runScanAssertions(query, ROWS.length, 1 * QUALIFIERS.length * ROWS.length * FAMILIES.length);
     }
+    */
 
     @Test
     public void testSingleRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey = {id}");
         query.setString("id", "nectarine");
-        runScanAssertions(query, 1, 1 * QUALIFIERS.length * 1 * FAMILIES.length);
-    }
+        Object[][] expectedResults = new Object[][] {
+            { "nectarine", "familyA", "fiveValues",   500L, "nectarine-fiveValues-4" },
+            { "nectarine", "familyA", "oneValueA",    100L, "nectarine-oneValueA-0" },
+            { "nectarine", "familyA", "oneValueB",  10000L, "nectarine-oneValueB-0" },
+            { "nectarine", "familyA", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
+            { "nectarine", "familyA", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
 
+            { "nectarine", "familyB", "fiveValues",   500L, "nectarine-fiveValues-4" },
+            { "nectarine", "familyB", "oneValueA",    100L, "nectarine-oneValueA-0" },
+            { "nectarine", "familyB", "oneValueB",  10000L, "nectarine-oneValueB-0" },
+            { "nectarine", "familyB", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
+            { "nectarine", "familyB", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
+
+            { "nectarine", "familyC", "fiveValues",   500L, "nectarine-fiveValues-4" },
+            { "nectarine", "familyC", "oneValueA",    100L, "nectarine-oneValueA-0" },
+            { "nectarine", "familyC", "oneValueB",  10000L, "nectarine-oneValueB-0" },
+            { "nectarine", "familyC", "tenValuesA",  1090L, "nectarine-tenValuesA-9" },
+            { "nectarine", "familyC", "tenValuesB", 10000L, "nectarine-tenValuesB-9" },
+        };
+        runScanAssertions(query, expectedResults, 1);
+    }
+/*
     @Test
     public void testLessThanRowScan() throws Exception {
         Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey < {id}");
@@ -180,7 +198,17 @@ public class IntTestDefaultQueryPlanner {
         runScanAssertions(query, 4, 1 * QUALIFIERS.length * 4 * FAMILIES.length);
     }
 
-    private void runScanAssertions(Query query, int expectedRowCount, int expectedKeyValueCount) throws Exception {
+    @Test
+    public void testFamilyAndQualifierScan() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan familyA:oneValueA, familyA:fiveValues from " + TABLE_NAME + " where rowkey = {id}");
+        Object[][] expectedResults = new Object[][] {
+            { "apple", "familyA", "oneValueA",  100L, "oneValueA0" },
+            { "apple", "familyA", "fiveValues", 100L, "fiveValues0" },
+        };
+    }
+*/
+    private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
         int keyValueCount = 0;
@@ -189,15 +217,21 @@ public class IntTestDefaultQueryPlanner {
             scanner = query.scan();
             assertThat("scanner is not null", scanner, is(notNullValue()));
             Result result = null;
-            // TODO: actually compare expected rowkeys, qualifiers, versions, and values
             while ((result = scanner.next()) != null) {
                 rowCount++;
-                for (byte[] family : FAMILIES) {
-                    for (Object[] qualifiers : QUALIFIERS) {
-                        byte[] qualifier = Bytes.toBytes((String)qualifiers[0]);
-                        List<KeyValue> keyValues = result.getColumn(family, qualifier);
-                        keyValueCount += keyValues.size();
-                    }
+                KeyValue[] keyValues = result.raw();
+                keyValueCount += keyValues.length;
+                for (int i = 0; i < keyValues.length; i++) {
+                    String expectedRowKey    = (String)expectedResults[i][0];
+                    String expectedFamily    = (String)expectedResults[i][1];
+                    String expectedQualifier = (String)expectedResults[i][2];
+                    long expectedTimestamp   = (Long)expectedResults[i][3];
+                    String expectedValue     = (String)expectedResults[i][4];
+                    assertThat("row key matches",   Bytes.toString(keyValues[i].getRow()),       is(expectedRowKey));
+                    assertThat("family matches",    Bytes.toString(keyValues[i].getFamily()),    is(expectedFamily));
+                    assertThat("qualifier matches", Bytes.toString(keyValues[i].getQualifier()), is(expectedQualifier));
+                    assertThat("timestamp matches", keyValues[i].getTimestamp(),                 is(expectedTimestamp));
+                    assertThat("value matches",     Bytes.toString(keyValues[i].getValue()),     is(expectedValue));
                 }
             }
         }
@@ -210,6 +244,6 @@ public class IntTestDefaultQueryPlanner {
             }
         }
         assertThat("row count is correct", rowCount, is(expectedRowCount));
-        assertThat("key value count is correct", keyValueCount, is(expectedKeyValueCount));
+        assertThat("key value count is correct", keyValueCount, is(expectedResults.length));
     }
 }
