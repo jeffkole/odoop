@@ -257,6 +257,23 @@ public class IntTestDefaultQueryPlanner {
         runScanAssertions(query, expectedResults, 2);
     }
 
+    @Test
+    public void testAllVersionsForColumnsScan() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan all versions of familyA:oneValueA, familyA:fiveValues from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "cherry");
+        Object[][] expectedResults = new Object[][] {
+            { "cherry", "familyA", "fiveValues", 500L, "cherry-fiveValues-4" },
+            { "cherry", "familyA", "fiveValues", 400L, "cherry-fiveValues-3" },
+            { "cherry", "familyA", "fiveValues", 300L, "cherry-fiveValues-2" },
+            { "cherry", "familyA", "fiveValues", 200L, "cherry-fiveValues-1" },
+            { "cherry", "familyA", "fiveValues", 100L, "cherry-fiveValues-0" },
+
+            { "cherry", "familyA", "oneValueA",  100L, "cherry-oneValueA-0" },
+        };
+        runScanAssertions(query, expectedResults, 1);
+    }
+
     private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
