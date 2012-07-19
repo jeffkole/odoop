@@ -45,15 +45,15 @@ public class IntTestDefaultQueryPlanner {
     };
     private static final String[] ROWS = new String[] {
         "apple",
-        "banana",
-        "orange",
-        "cantaloupe",
-        "strawberry",
-        "nectarine",
         "apricot",
-        "peach",
-        "watermelon",
+        "banana",
+        "cantaloupe",
         "cherry",
+        "nectarine",
+        "orange",
+        "peach",
+        "strawberry",
+        "watermelon",
     };
     // qualifier, num versions, timestamp start, timestamp interval
     private static final Object[][] QUALIFIERS = new Object[][] {
@@ -131,14 +131,56 @@ public class IntTestDefaultQueryPlanner {
     }
 
     @Test
-    public void testSimple() throws Exception {
-        String query = "scan from " + TABLE_NAME;
+    public void testSimpleScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME);
         // we expect only one version per qualifier
-        runQueryAssertions(query, ROWS.length, 1 * QUALIFIERS.length * ROWS.length * FAMILIES.length);
+        runScanAssertions(query, ROWS.length, 1 * QUALIFIERS.length * ROWS.length * FAMILIES.length);
     }
 
-    private void runQueryAssertions(String ql, int expectedRowCount, int expectedKeyValueCount) throws Exception {
-        Query query = this.queryPlanner.parse(ql);
+    @Test
+    public void testSingleRowScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "nectarine");
+        runScanAssertions(query, 1, 1 * QUALIFIERS.length * 1 * FAMILIES.length);
+    }
+
+    @Test
+    public void testLessThanRowScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey < {id}");
+        query.setString("id", "cherry");
+        runScanAssertions(query, 4, 1 * QUALIFIERS.length * 4 * FAMILIES.length);
+    }
+
+    @Test
+    public void testLessThanEqualRowScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey <= {id}");
+        query.setString("id", "cherry");
+        runScanAssertions(query, 5, 1 * QUALIFIERS.length * 5 * FAMILIES.length);
+    }
+
+    @Test
+    public void testGreaterThanRowScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey > {id}");
+        query.setString("id", "cherry");
+        runScanAssertions(query, 5, 1 * QUALIFIERS.length * 5 * FAMILIES.length);
+    }
+
+    @Test
+    public void testGreaterThanEqualRowScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey >= {id}");
+        query.setString("id", "cherry");
+        runScanAssertions(query, 6, 1 * QUALIFIERS.length * 6 * FAMILIES.length);
+    }
+
+    @Test
+    public void testBetweenRowScan() throws Exception {
+        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME + " where rowkey between {low} and {high}");
+        query.setString("low", "banana");
+        query.setString("high", "orange");
+        runScanAssertions(query, 4, 1 * QUALIFIERS.length * 4 * FAMILIES.length);
+    }
+
+    private void runScanAssertions(Query query, int expectedRowCount, int expectedKeyValueCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
         int keyValueCount = 0;
@@ -147,6 +189,7 @@ public class IntTestDefaultQueryPlanner {
             scanner = query.scan();
             assertThat("scanner is not null", scanner, is(notNullValue()));
             Result result = null;
+            // TODO: actually compare expected rowkeys, qualifiers, versions, and values
             while ((result = scanner.next()) != null) {
                 rowCount++;
                 for (byte[] family : FAMILIES) {
