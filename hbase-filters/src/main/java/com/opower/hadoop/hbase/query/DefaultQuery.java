@@ -1,5 +1,8 @@
 package com.opower.hadoop.hbase.query;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -16,6 +19,8 @@ import java.util.Map;
  * @author jeff@opower.com
  */
 public class DefaultQuery implements Query {
+    private static final Log LOG = LogFactory.getLog(DefaultQuery.class);
+
     private final DefaultQueryPlanner queryPlanner;
     private final QueryBuilder queryBuilder;
     private final Map<String, byte[]> parameters = new HashMap<String, byte[]>();
@@ -29,12 +34,21 @@ public class DefaultQuery implements Query {
     }
 
     public void close() {
-        this.queryPlanner.putTable(this.hTable);
+        if (this.hTable != null) {
+            this.queryPlanner.putTable(this.hTable);
+        }
         this.hTable = null;
     }
 
     public ResultScanner scan() throws IOException {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Planning scan with parameters (%s) and timestamps (%s)",
+                        this.parameters, this.timestamps));
+        }
         Scan scan = this.queryBuilder.planScan(this.parameters, this.timestamps);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace(String.format("Getting table named '%s'", this.queryBuilder.getTableName()));
+        }
         this.hTable = this.queryPlanner.getTable(this.queryBuilder.getTableName());
         return this.hTable.getScanner(scan);
     }

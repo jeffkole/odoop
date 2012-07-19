@@ -1,5 +1,8 @@
 package com.opower.hadoop.hbase.query;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 
@@ -12,6 +15,8 @@ import java.io.IOException;
  * @author jeff@opower.com
  */
 public class DefaultQueryPlanner implements QueryPlanner {
+    private static final Log LOG = LogFactory.getLog(DefaultQueryPlanner.class);
+
     private final HTablePool hTablePool;
 
     public DefaultQueryPlanner(HTablePool hTablePool) {
@@ -25,6 +30,9 @@ public class DefaultQueryPlanner implements QueryPlanner {
      */
     @Override
     public Query parse(String query) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Parsing '%s'", query));
+        }
         QueryBuilder builder = QueryBuilder.parse(query);
         return new DefaultQuery(this, builder);
     }
@@ -34,6 +42,9 @@ public class DefaultQueryPlanner implements QueryPlanner {
      */
     @Override
     public void close() throws IOException {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Closing HTablePool");
+        }
         this.hTablePool.close();
     }
 
@@ -45,7 +56,14 @@ public class DefaultQueryPlanner implements QueryPlanner {
      * @return an instance from the internal table pool
      */
     HTableInterface getTable(String tableName) {
-        return this.hTablePool.getTable(tableName);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace(String.format("Getting table from pool named '%s'", tableName));
+        }
+        HTableInterface table = this.hTablePool.getTable(tableName);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace(String.format("Table named %s from pool is %s", tableName, table));
+        }
+        return table;
     }
 
     /**
@@ -54,6 +72,9 @@ public class DefaultQueryPlanner implements QueryPlanner {
      * @param table the table to return to the pool
      */
     void putTable(HTableInterface table) {
+        if (LOG.isTraceEnabled()) {
+            LOG.trace(String.format("Returning table to pool %s", table));
+        }
         this.hTablePool.putTable(table);
     }
 }
