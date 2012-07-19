@@ -132,7 +132,13 @@ public class IntTestDefaultQueryPlanner {
 
     @Test
     public void testSimple() throws Exception {
-        Query query = this.queryPlanner.parse("scan from " + TABLE_NAME);
+        String query = "scan from " + TABLE_NAME;
+        // we expect only one version per qualifier
+        runQueryAssertions(query, ROWS.length, 1 * QUALIFIERS.length * ROWS.length * FAMILIES.length);
+    }
+
+    private void runQueryAssertions(String ql, int expectedRowCount, int expectedKeyValueCount) throws Exception {
+        Query query = this.queryPlanner.parse(ql);
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
         int keyValueCount = 0;
@@ -151,10 +157,6 @@ public class IntTestDefaultQueryPlanner {
                     }
                 }
             }
-            assertThat("row count is correct", rowCount, equalTo(ROWS.length));
-            // we expect only one version per qualifier
-            assertThat("key value count is correct", keyValueCount,
-                    equalTo(1 * QUALIFIERS.length * ROWS.length * FAMILIES.length));
         }
         finally {
             if (scanner != null) {
@@ -164,5 +166,7 @@ public class IntTestDefaultQueryPlanner {
                 query.close();
             }
         }
+        assertThat("row count is correct", rowCount, is(expectedRowCount));
+        assertThat("key value count is correct", keyValueCount, is(expectedKeyValueCount));
     }
 }
