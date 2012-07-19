@@ -232,10 +232,12 @@ public class IntTestDefaultQueryPlanner {
     public void testFamilyAndQualifierScan() throws Exception {
         Query query = this.queryPlanner.parse(
                 "scan familyA:oneValueA, familyA:fiveValues from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "apple");
         Object[][] expectedResults = new Object[][] {
-            { "apple", "familyA", "oneValueA",  100L, "oneValueA0" },
-            { "apple", "familyA", "fiveValues", 100L, "fiveValues0" },
+            { "apple", "familyA", "fiveValues", 500L, "apple-fiveValues-4" },
+            { "apple", "familyA", "oneValueA",  100L, "apple-oneValueA-0" },
         };
+        runScanAssertions(query, expectedResults, 1);
     }
 
     private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
