@@ -18,7 +18,7 @@ import java.io.IOException;
 public class ColumnVersionTimerangeFilter extends FilterBase {
     private byte[] family;
     private byte[] qualifier;
-    private int numVersions;
+    private int maxVersions;
     private long start;
     private long stop;
 
@@ -32,10 +32,10 @@ public class ColumnVersionTimerangeFilter extends FilterBase {
      *
      * @param family
      * @param qualifier
-     * @param numVersions
+     * @param maxVersions
      */
-    public ColumnVersionTimerangeFilter(byte[] family, byte[] qualifier, int numVersions) {
-        this(family, qualifier, numVersions, Long.MIN_VALUE, Long.MAX_VALUE);
+    public ColumnVersionTimerangeFilter(byte[] family, byte[] qualifier, int maxVersions) {
+        this(family, qualifier, maxVersions, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
     /**
@@ -45,16 +45,36 @@ public class ColumnVersionTimerangeFilter extends FilterBase {
      *
      * @param family
      * @param qualifier
-     * @param numVersions
+     * @param maxVersions
      * @param start
      * @param stop
      */
-    public ColumnVersionTimerangeFilter(byte[] family, byte[] qualifier, int numVersions, long start, long stop) {
+    public ColumnVersionTimerangeFilter(byte[] family, byte[] qualifier, int maxVersions, long start, long stop) {
         this.family = family;
         this.qualifier = qualifier;
-        this.numVersions = numVersions;
+        this.maxVersions = maxVersions;
         this.start = start;
         this.stop = stop;
+    }
+
+    public byte[] getFamily() {
+        return this.family;
+    }
+
+    public byte[] getQualifier() {
+        return this.qualifier;
+    }
+
+    public int getMaxVersions() {
+        return this.maxVersions;
+    }
+
+    public long getStartTimestamp() {
+        return this.start;
+    }
+
+    public long getStopTimestamp() {
+        return this.stop;
     }
 
     @Override
@@ -71,7 +91,7 @@ public class ColumnVersionTimerangeFilter extends FilterBase {
             return ReturnCode.SKIP; // TODO: should this be NEXT_COL, or does that mess with FilterList?
         }
         // If we have found enough versions of this qualifier, then skip.
-        if (this.currentNumVersionsFound >= this.numVersions) {
+        if (this.currentNumVersionsFound >= this.maxVersions) {
             return ReturnCode.SKIP; // TODO: should this be NEXT_COL, or does that mess with FilterList?
         }
         long timestamp = keyValue.getTimestamp();
@@ -85,7 +105,7 @@ public class ColumnVersionTimerangeFilter extends FilterBase {
     public void write(DataOutput out) throws IOException {
         Bytes.writeByteArray(out, this.family);
         Bytes.writeByteArray(out, this.qualifier);
-        out.writeInt(this.numVersions);
+        out.writeInt(this.maxVersions);
         out.writeLong(this.start);
         out.writeLong(this.stop);
     }
@@ -93,7 +113,7 @@ public class ColumnVersionTimerangeFilter extends FilterBase {
     public void readFields(DataInput in) throws IOException {
         this.family = Bytes.readByteArray(in);
         this.qualifier = Bytes.readByteArray(in);
-        this.numVersions = in.readInt();
+        this.maxVersions = in.readInt();
         this.start = in.readLong();
         this.stop = in.readLong();
     }

@@ -4,12 +4,16 @@ import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.BinaryComparator
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter
+import org.apache.hadoop.hbase.filter.Filter
+import org.apache.hadoop.hbase.filter.FilterList
 import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.immutable
+
+import com.opower.hadoop.hbase.filter.ColumnVersionTimerangeFilter
 
 object QueryBuilder {
   def parse(query : String) : QueryBuilder = {
@@ -55,9 +59,23 @@ class QueryBuilder(query : String) {
     validateTimestamps(timestamps)
 
     val scan = new Scan
+
+    val columnFilterBuilder = Seq.newBuilder[Filter]
+    val allColumnsHaveTheSameNumVersions = this.columns.map(_.versions.numVersions).distinct.length == 1
     for (column <- this.columns) {
       scan.addColumn(column.family, column.qualifier)
+      if (!column.timeRange.isEmpty) {
+        val timeRange = column.timeRange.get
+        columnFilterBuilder += new ColumnVersionTimerangeFilter(
+          column.family, column.qualifier, column.versions.numVersions, timestamps(timeRange._1), timestamps(timeRange._2))
+      }
+      else if (!allColumnsHaveTheSameNumVersions) {
+        columnFilterBuilder += new ColumnVersionTimerangeFilter(column.family, column.qualifier, column.versions.numVersions)
+      }
     }
+    val columnFilters = columnFilterBuilder.result
+
+    var rowFilter : Option[Filter] = None
     for (rowConstraint <- this.rowConstraints) {
       rowConstraint match {
         case SingleRowConstraint(">=", paramName) => scan.setStartRow(parameters(paramName))
@@ -71,21 +89,36 @@ class QueryBuilder(query : String) {
         case SingleRowConstraint(">",  paramName) => {
           val startRow = parameters(paramName)
           scan.setStartRow(startRow)
-          scan.setFilter(new RowFilter(CompareOp.GREATER, new BinaryComparator(startRow)))
+          rowFilter = Some(new RowFilter(CompareOp.GREATER, new BinaryComparator(startRow)))
         }
-        case SingleRowConstraint("<=", paramName) => scan.setFilter(new InclusiveStopFilter(parameters(paramName)))
+        case SingleRowConstraint("<=", paramName) => rowFilter = Some(new InclusiveStopFilter(parameters(paramName)))
         case BetweenRowConstraint(startParamName, stopParamName) => {
           scan.setStartRow(parameters(startParamName))
           scan.setStopRow(parameters(stopParamName))
         }
       }
     }
+
+    if (!columnFilters.isEmpty) {
+      val columnFilter = new FilterList(FilterList.Operator.MUST_PASS_ONE, columnFilters.asJava)
+      if (!rowFilter.isEmpty) {
+        val scanFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL, Seq(rowFilter.get, columnFilter).asJava)
+        scan.setFilter(scanFilter)
+      }
+      else {
+        scan.setFilter(columnFilter)
+      }
+    }
+    else if (!rowFilter.isEmpty) {
+      scan.setFilter(rowFilter.get)
+    }
+
     if (!this.columns.isEmpty) {
       // pull out the min and max timestamps in order to set the timerange on the scan
       if (!timestamps.isEmpty) {
         // only set a timerange on the scan if all columns have timeranges defined themselves
         val allColumnsHaveTimeRanges = !this.columns.exists(_.timeRange.isEmpty)
-          if (allColumnsHaveTimeRanges) {
+        if (allColumnsHaveTimeRanges) {
           val minTimestamp = timestamps.minBy(_._2)._2
           val maxTimestamp = timestamps.maxBy(_._2)._2
           scan.setTimeRange(minTimestamp, maxTimestamp)

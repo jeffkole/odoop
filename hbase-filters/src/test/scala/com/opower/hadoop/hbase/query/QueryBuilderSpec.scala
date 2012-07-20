@@ -3,6 +3,7 @@ package com.opower.hadoop.hbase.query
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter
+import org.apache.hadoop.hbase.filter.FilterList
 import org.apache.hadoop.hbase.filter.RowFilter
 import org.apache.hadoop.hbase.util.Bytes
 
@@ -13,6 +14,8 @@ import org.scalatest.FunSpec
 import org.scalatest.GivenWhenThen
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
+
+import com.opower.hadoop.hbase.filter.ColumnVersionTimerangeFilter
 
 import scala.collection.JavaConverters._
 
@@ -78,8 +81,28 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       stringQualifiers should contain ("two")
     }
 
-    // the scan time range must not be set as well
-    it("should add timestamp filters for columns that have timestamps specified") (pending)
+    it("should add timestamp filters for columns that have timestamps specified") {
+      given("a builder with columns with timeranges")
+      builder.addColumnDefinition(Column("family", "one", QueryVersions.One, Some(("start", "stop"))))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, Map("start" -> 100L, "stop" -> 500L))
+
+      then("the scan should have a filter with the timestamp set")
+      scan.getTimeRange.getMin should equal (100L)
+      scan.getTimeRange.getMax should equal (500L)
+      scan.hasFilter should be (true)
+      scan.getFilter.isInstanceOf[FilterList] should be (true)
+      val filterList = scan.getFilter.asInstanceOf[FilterList]
+      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
+      filterList.getFilters should have size (1)
+      val filter = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filter.getFamily) should equal ("family")
+      Bytes.toString(filter.getQualifier) should equal ("one")
+      filter.getMaxVersions should equal (1)
+      filter.getStartTimestamp should equal (100L)
+      filter.getStopTimestamp should equal (500L)
+    }
 
     it("should set the timerange on the scan if all columns have timeranges set") {
       given("a builder with multiple columns with timeranges set")
@@ -94,6 +117,27 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       then("the scan should have a timerange that covers all column timeranges")
       scan.getTimeRange.getMin should equal (100L)
       scan.getTimeRange.getMax should equal (800L)
+
+      scan.hasFilter should be (true)
+      scan.getFilter.isInstanceOf[FilterList] should be (true)
+      val filterList = scan.getFilter.asInstanceOf[FilterList]
+      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
+      filterList.getFilters should have size (2)
+
+      // the builder operates in reverse, so the columns are defined backwards
+      val filter = filterList.getFilters.get(1).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filter.getFamily) should equal ("family")
+      Bytes.toString(filter.getQualifier) should equal ("one")
+      filter.getMaxVersions should equal (1)
+      filter.getStartTimestamp should equal (100L)
+      filter.getStopTimestamp should equal (500L)
+
+      val filterB = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filterB.getFamily) should equal ("family")
+      Bytes.toString(filterB.getQualifier) should equal ("two")
+      filterB.getMaxVersions should equal (1)
+      filterB.getStartTimestamp should equal (300L)
+      filterB.getStopTimestamp should equal (800L)
     }
 
     it("should not set the timerange on the scan if there is a mix of timeranges on columns") {
@@ -112,7 +156,62 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
     }
 
     // the scan versions must be set to max versions
-    it("should add version filters for columns that have versions specified") (pending)
+    it("should add version filters for columns that have versions specified") {
+      given("a builder with multiple columns with versions set")
+      builder.addColumnDefinition(Column("family", "one", QueryVersions(5)))
+      builder.addColumnDefinition(Column("family", "two", QueryVersions.One))
+      builder.addColumnDefinition(Column("family", "three", QueryVersions.All))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should have version filters set for the columns")
+      scan.getMaxVersions should equal(Int.MaxValue)
+      scan.getTimeRange.getMin should equal (0)
+      scan.getTimeRange.getMax should equal (Long.MaxValue)
+      scan.hasFilter should be (true)
+      scan.getFilter.isInstanceOf[FilterList] should be (true)
+      val filterList = scan.getFilter.asInstanceOf[FilterList]
+      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
+      filterList.getFilters should have size(3)
+
+      val filterA = filterList.getFilters.get(2).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filterA.getFamily) should equal ("family")
+      Bytes.toString(filterA.getQualifier) should equal ("one")
+      filterA.getMaxVersions should equal (5)
+      filterA.getStartTimestamp should equal (Long.MinValue)
+      filterA.getStopTimestamp should equal (Long.MaxValue)
+
+      val filterB = filterList.getFilters.get(1).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filterB.getFamily) should equal ("family")
+      Bytes.toString(filterB.getQualifier) should equal ("two")
+      filterB.getMaxVersions should equal (1)
+      filterB.getStartTimestamp should equal (Long.MinValue)
+      filterB.getStopTimestamp should equal (Long.MaxValue)
+
+      val filterC = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filterC.getFamily) should equal ("family")
+      Bytes.toString(filterC.getQualifier) should equal ("three")
+      filterC.getMaxVersions should equal (Int.MaxValue)
+      filterC.getStartTimestamp should equal (Long.MinValue)
+      filterC.getStopTimestamp should equal (Long.MaxValue)
+    }
+
+    it("should not set version filters on columns if all of the column versions are the same") {
+      given("a builder with multiple columns with the same versions set")
+      builder.addColumnDefinition(Column("family", "one", QueryVersions(5)))
+      builder.addColumnDefinition(Column("family", "two", QueryVersions(5)))
+      builder.addColumnDefinition(Column("family", "three", QueryVersions(5)))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should have no version filters set for the columns")
+      scan.getMaxVersions should equal(5)
+      scan.getTimeRange.getMin should equal (0)
+      scan.getTimeRange.getMax should equal (Long.MaxValue)
+      scan.hasFilter should be (false)
+    }
 
     it("should set the max versions on the scan to the max across all columns") {
       given("a builder with columns with versions set")

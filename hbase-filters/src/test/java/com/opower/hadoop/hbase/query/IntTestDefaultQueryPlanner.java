@@ -260,7 +260,8 @@ public class IntTestDefaultQueryPlanner {
     @Test
     public void testAllVersionsForColumnsScan() throws Exception {
         Query query = this.queryPlanner.parse(
-                "scan all versions of familyA:oneValueA, familyA:fiveValues from " + TABLE_NAME + " where rowkey = {id}");
+                "scan all versions of familyA:oneValueA, all versions of familyA:fiveValues " +
+                "from " + TABLE_NAME + " where rowkey = {id}");
         query.setString("id", "cherry");
         Object[][] expectedResults = new Object[][] {
             { "cherry", "familyA", "fiveValues", 500L, "cherry-fiveValues-4" },
