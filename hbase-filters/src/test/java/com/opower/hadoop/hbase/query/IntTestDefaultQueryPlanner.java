@@ -275,6 +275,34 @@ public class IntTestDefaultQueryPlanner {
         runScanAssertions(query, expectedResults, 1);
     }
 
+    @Test
+    public void testVersionAndTimerangeColumnScan() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan 2 versions of familyB:fiveValues, " +
+                "4 versions of familyC:tenValuesB between {ctbstart} and {ctbstop}, " +
+                "familyA:tenValuesB between {atbstart} and {atbstop} " +
+                "from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "cherry");
+        // will result in 4 most recent versions of familyC:tenValuesB
+        query.setTimestamp("ctbstart", 2000L);
+        query.setTimestamp("ctbstop", 20000L);
+        // will result in familyA:tenValuesB with timestamp 5000
+        query.setTimestamp("atbstart", 3000L);
+        query.setTimestamp("atbstop",  6000L);
+        Object[][] expectedResults = new Object[][] {
+            { "cherry", "familyA", "tenValuesB",  5000L, "cherry-tenValuesB-4" },
+
+            { "cherry", "familyB", "fiveValues", 500L, "cherry-fiveValues-4" },
+            { "cherry", "familyB", "fiveValues", 400L, "cherry-fiveValues-3" },
+
+            { "cherry", "familyC", "tenValuesB", 10000L, "cherry-tenValuesB-9" },
+            { "cherry", "familyC", "tenValuesB",  9000L, "cherry-tenValuesB-8" },
+            { "cherry", "familyC", "tenValuesB",  8000L, "cherry-tenValuesB-7" },
+            { "cherry", "familyC", "tenValuesB",  7000L, "cherry-tenValuesB-6" },
+        };
+        runScanAssertions(query, expectedResults, 1);
+    }
+
     private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
