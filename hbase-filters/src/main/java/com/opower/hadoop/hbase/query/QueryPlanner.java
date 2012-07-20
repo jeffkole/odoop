@@ -1,7 +1,6 @@
 package com.opower.hadoop.hbase.query;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 /**
  * Prepares queries for execution against an HBase cluster
@@ -16,9 +15,4 @@ public interface QueryPlanner extends Closeable {
      * @return a {@link Query} that can be run against HBase
      */
     Query parse(String query);
-
-    /**
-     * Release any resources associated with this planner
-     */
-    void close() throws IOException;
 }

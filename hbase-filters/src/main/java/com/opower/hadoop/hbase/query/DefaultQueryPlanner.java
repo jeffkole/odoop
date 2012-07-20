@@ -10,7 +10,7 @@ import java.io.IOException;
 
 /**
  * A default implementation of the {@link QueryPlanner} that is the main entry-point for
- * doing queries against HBase.
+ * running queries against HBase.
  *
  * @author jeff@opower.com
  */

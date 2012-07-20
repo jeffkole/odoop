@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Encapsulates the configuration for a query that will be run against HBase
+ * Default implementation of a {@link Query}, which collaborates with the {@link DefaultQueryPlanner}
  *
  * @author jeff@opower.com
  */
@@ -40,6 +40,12 @@ public class DefaultQuery implements Query {
         this.hTable = null;
     }
 
+    /**
+     * Plan and run the query, resulting in a scan operation on HBase
+     *
+     * {@inheritDoc}
+     */
+    @Override
     public ResultScanner scan() throws IOException {
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("Planning scan with parameters (%s) and timestamps (%s)",
