@@ -6,8 +6,8 @@ import java.io.IOException;
 
 /**
  * A base class to extend when the {@link Selector} you want to write has no state and thus does not
- * need specific implementations of the {@link Writable} methods.  The methods implemented here do
- * absolutely nothing.
+ * need specific implementations of the {@link org.apache.hadoop.io.Writable} methods.
+ * The methods implemented here do absolutely nothing.
  *
  * @author jeff@opower.com
  */

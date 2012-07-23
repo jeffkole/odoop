@@ -12,8 +12,9 @@ import java.io.IOException;
 import com.opower.common.reflect.Reflection;
 
 /**
- * Adapts a {@link Selector} to fit the contract of a {@link Filter}.  When you want to use a {@link Selector} simply
- * instantiate a {@link SelectorFilter} to wrap it up and set it on a {@link Scan} or {@link Get}.
+ * Adapts a {@link Selector} to fit the contract of a {@link org.apache.hadoop.hbase.filter.Filter}.
+ * When you want to use a {@link Selector} simply instantiate a {@link SelectorFilter} to wrap it
+ * up and set it on a {@code Scan} or {@code Get}.
  *
  * @author jeff@opower.com
  */
@@ -26,10 +27,11 @@ public class SelectorFilter extends FilterBase {
     public SelectorFilter() {}
 
     /**
-     * Construct a {@Filter} that wraps a {@link Selector}.  The selector passed in must be of a publicly accessible
-     * class, otherwise deserialization on the server will not work.
+     * Construct a {@link org.apache.hadoop.hbase.filter.Filter} that wraps a {@link Selector}.
+     * The selector passed in must be of a publicly accessible class, otherwise deserialization
+     * on the server will not work.
      *
-     * @param selector an instance of a publicly accessible {@Selector}
+     * @param selector an instance of a publicly accessible Selector
      */
     public SelectorFilter(Selector selector) {
         if (selector == null) {

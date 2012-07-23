@@ -6,10 +6,12 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 
 /**
- * Inverses the contract of an HBase {@link Filter} so that it is more easily understood.  A {@link Selector}
- * selects rows or cells to be returned from a {@link Get} or {@link Scan}, whereas a {@link Filter} filters
- * them out.  To use a {@link Selector}, simply instantiate a {@link SelectorFilter} with the {@link Selector}
- * you want to use and set it on the {@link Get} or {@link Scan}.
+ * Inverses the contract of an HBase {@link org.apache.hadoop.hbase.filter.Filter} so that it
+ * is more easily understood.  A {@link Selector} selects rows or cells to be returned from a
+ * {@link org.apache.hadoop.hbase.client.Get} or {@link org.apache.hadoop.hbase.client.Scan},
+ * whereas a Filter filters them out.  To use a {@link Selector}, simply instantiate a
+ * {@link SelectorFilter} with the {@link Selector} you want to use and set it on the
+ * {@code Get} or {@code Scan}.
  *
  * @author jeff@opower.com
  */
@@ -29,8 +31,8 @@ public interface Selector extends Writable {
      * not even be called.  Therefore, the only reasonable values to return are {@code INCLUDE, SKIP, NEXT_COL}.
      *
      * @param keyValue the KeyValue in question
-     * @see Filter.ReturnCode
-     * @see Filter#filterKeyValue(KeyValue)
+     * @see ReturnCode
+     * @see org.apache.hadoop.hbase.filter.Filter#filterKeyValue(KeyValue)
      */
     ReturnCode handleKeyValue(KeyValue keyValue);
 }

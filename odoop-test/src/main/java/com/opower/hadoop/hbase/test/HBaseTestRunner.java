@@ -13,17 +13,18 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 /**
- * A {@link Runner JUnit runner} that boots up a {@link MiniHBaseCluster} for the lifespan of all
- * tests that are run, thus allowing you to take the performance penalty of booting the cluster
- * once instead of with each test class that is run.  The flip side of this is that each test that
- * uses the mini cluster must definitely clean up after itself so that it does not affect any other
- * test that may run.
+ * <p>A {@link org.junit.runner.Runner JUnit runner} that boots up a {@link org.apache.hadoop.hbase.MiniHBaseCluster}
+ * for the lifespan of all tests that are run, thus allowing you to take the performance penalty of
+ * booting the cluster once instead of with each test class that is run.  The flip side of this is that
+ * each test that uses the mini cluster must definitely clean up after itself so that it does not affect
+ * any other test that may run.
  * </p><p>
  * When a test class is run with this runner and has an {@link HBaseTestingUtility} member or static
  * field, that field will be populated with the {@link HBaseTestingUtility} that is shared for all
  * test classes in the test run.
  * </p><p>
  * This class is highly influenced by Spring's SpringJunit4ClassRunner and TestContextManager.
+ * </p>
  *
  * @author jeff@opower.com
  */
@@ -62,9 +63,9 @@ public class HBaseTestRunner extends BlockJUnit4ClassRunner {
     }
 
     /**
-     * Prepares a test suite for running with a {@link MiniHBaseCluster}.  Instatiates an
-     * {@link HBaseTestingUtility} if one is not already instantiated for the test suite
-     * and populates any member field in the current test class with the resulting
+     * Prepares a test suite for running with a {@link org.apache.hadoop.hbase.MiniHBaseCluster}.
+     * Instatiates an {@link HBaseTestingUtility} if one is not already instantiated for the test
+     * suite and populates any member field in the current test class with the resulting
      * {@link HBaseTestingUtility}.
      *
      * {@inheritDoc}
@@ -78,9 +79,9 @@ public class HBaseTestRunner extends BlockJUnit4ClassRunner {
     }
 
     /**
-     * Prepares a test suite for running with a {@link MiniHBaseCluster}.  Instatiates an
-     * {@link HBaseTestingUtility} if one is not already instantiated for the test suite
-     * and populates any static field in the current test class with the resulting
+     * Prepares a test suite for running with a {@link org.apache.hadoop.hbase.MiniHBaseCluster}.
+     * Instatiates an {@link HBaseTestingUtility} if one is not already instantiated for the test
+     * suite and populates any static field in the current test class with the resulting
      * {@link HBaseTestingUtility}.
      *
      * {@inheritDoc}
