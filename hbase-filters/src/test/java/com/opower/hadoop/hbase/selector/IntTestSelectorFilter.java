@@ -10,8 +10,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -30,84 +30,84 @@ import static org.junit.Assert.*;
  */
 @RunWith(HBaseTestRunner.class)
 public class IntTestSelectorFilter {
-    private HBaseTestingUtility hbaseTestingUtility;
+    private static HBaseTestingUtility hbaseTestingUtility;
 
-    private byte[] tableName = Bytes.toBytes("filter_test");
-    private byte[] family = new byte[] { 'd' };
-    private HTable table;
+    private static byte[] tableNameSimple = Bytes.toBytes("filter_test_simple");
+    private static byte[] tableNameComplex = Bytes.toBytes("filter_test_complex");
+    private static byte[] family = new byte[] { 'd' };
+    private static HTable tableSimple;
+    private static HTable tableComplex;
+    private static int rowsSimple;
+    private static int rowsComplex;
 
-    @Before
-    public void setUp() throws Exception {
-        this.table = hbaseTestingUtility.createTable(this.tableName, this.family, 30);
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+        tableSimple = hbaseTestingUtility.createTable(tableNameSimple, family, 30);
+        tableComplex = hbaseTestingUtility.createTable(tableNameComplex, family, 30);
+        rowsSimple = loadSimpleTable(tableSimple, family);
+        rowsComplex = loadComplexTable(tableComplex, family);
     }
 
-    @After
-    public void tearDown() throws Exception {
-        this.hbaseTestingUtility.deleteTable(this.tableName);
+    @AfterClass
+    public static void tearDown() throws Exception {
+        hbaseTestingUtility.deleteTable(tableNameSimple);
+        hbaseTestingUtility.deleteTable(tableNameComplex);
     }
 
     @Test
     public void testAllRowsWithSimpleCells() throws Exception {
-        int rows = loadSimpleTable(this.table, this.family);
-        runFilteredScanTest(new AllRowSelector(), this.table, this.family, rows);
+        runFilteredScanTest(new AllRowSelector(), tableSimple, family, rowsSimple);
     }
 
     @Test
     public void testAllRowsWithComplexCells() throws Exception {
-        int rows = loadComplexTable(this.table, this.family);
-        runFilteredScanTest(new AllRowSelector(), this.table, this.family, rows);
+        runFilteredScanTest(new AllRowSelector(), tableComplex, family, rowsComplex);
     }
 
     @Test
     public void testNoRowsWithSimpleCells() throws Exception {
-        int rows = loadSimpleTable(this.table, this.family);
-        runFilteredScanTest(new NoRowSelector(), this.table, this.family, 0);
+        runFilteredScanTest(new NoRowSelector(), tableSimple, family, 0);
     }
 
     @Test
     public void testNoRowsWithComplexCells() throws Exception {
-        int rows = loadComplexTable(this.table, this.family);
-        runFilteredScanTest(new NoRowSelector(), this.table, this.family, 0);
+        runFilteredScanTest(new NoRowSelector(), tableComplex, family, 0);
     }
 
     @Test
     public void testOddRowsWithSimpleCells() throws Exception {
-        int rows = loadSimpleTable(this.table, this.family);
-        runFilteredScanTest(new OddRowSelector(), this.table, this.family, rows / 2);
+        runFilteredScanTest(new OddRowSelector(), tableSimple, family, rowsSimple / 2);
     }
 
     @Test
     public void testOddRowsWithComplexCells() throws Exception {
-        int rows = loadComplexTable(this.table, this.family);
-        runFilteredScanTest(new OddRowSelector(), this.table, this.family, rows / 2);
+        runFilteredScanTest(new OddRowSelector(), tableComplex, family, rowsComplex / 2);
     }
 
     @Test
     public void testSpecificQualifierSelection() throws Exception {
+        // these must match the qualifiers and versions used in loadComplexTable
         final byte[] qa = new byte[] { 'a' };
         final byte[] qb = new byte[] { 'b' };
         final byte[] qc = new byte[] { 'c' };
         int aVersions = 5;
         int bVersions = 1;
         int cVersions = 15;
-        int rowsExpected = loadTable(this.table, this.family, qa, aVersions);
-        loadTable(this.table, this.family, qb, bVersions);
-        loadTable(this.table, this.family, qc, cVersions);
 
-        runQualifierTest(qa, rowsExpected, aVersions);
-        runQualifierTest(qb, rowsExpected, bVersions);
-        runQualifierTest(qc, rowsExpected, cVersions);
+        runQualifierTest(tableComplex, qa, rowsComplex, aVersions);
+        runQualifierTest(tableComplex, qb, rowsComplex, bVersions);
+        runQualifierTest(tableComplex, qc, rowsComplex, cVersions);
     }
 
-    private void runQualifierTest(byte[] qualifier, int rowsExpected, int versionsPerRow) throws Exception {
+    private void runQualifierTest(HTable table, byte[] qualifier, int rowsExpected, int versionsPerRow) throws Exception {
         Filter filter = new SelectorFilter(new QualifierSelector(qualifier));
         Scan scan = new Scan();
-        scan.addFamily(this.family);
+        scan.addFamily(family);
         scan.setFilter(filter);
         scan.setMaxVersions();
         int rowsReturned = 0;
         int keyValuesReturned = 0;
-        for (Result result : this.table.getScanner(scan)) {
+        for (Result result : table.getScanner(scan)) {
             rowsReturned++;
             KeyValue[] keyValues = result.raw();
             keyValuesReturned += keyValues.length;
@@ -132,12 +132,12 @@ public class IntTestSelectorFilter {
         assertEquals("Wrong number of rows", expectedRows, rows);
     }
 
-    private int loadSimpleTable(HTable table, byte[] family) throws Exception {
+    private static int loadSimpleTable(HTable table, byte[] family) throws Exception {
         // loadTable loads rows from 'aaa' to 'zzz'
-        return hbaseTestingUtility.loadTable(this.table, this.family);
+        return hbaseTestingUtility.loadTable(table, family);
     }
 
-    private int loadComplexTable(HTable table, byte[] family) throws Exception {
+    private static int loadComplexTable(HTable table, byte[] family) throws Exception {
         byte[] qa = new byte[] { 'a' };
         byte[] qb = new byte[] { 'b' };
         byte[] qc = new byte[] { 'c' };
@@ -147,7 +147,7 @@ public class IntTestSelectorFilter {
         return rows;
     }
 
-    private int loadTable(HTable table, byte[] family, byte[] qualifier, int numVersions) throws Exception {
+    private static int loadTable(HTable table, byte[] family, byte[] qualifier, int numVersions) throws Exception {
         table.setAutoFlush(false);
         int rowCount = 0;
         byte[] key = new byte[3];
