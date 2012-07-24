@@ -155,6 +155,40 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getTimeRange.getMax should equal (Long.MaxValue)
     }
 
+    it("should set filters for all columns if one of them uses versions or timestamps") {
+      given("a builder with a column with all versions and a timerange and a column with all versions only")
+      builder.addColumnDefinition(Column("family", "one", QueryVersions.All, Some(("start", "stop"))))
+      builder.addColumnDefinition(Column("family", "two", QueryVersions.All))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, Map("start" -> 100L, "stop" -> 500L))
+
+      then("the scan should have a no timerange set and should have a filter for both")
+      scan.getMaxVersions should equal(Int.MaxValue)
+      scan.getTimeRange.getMin should equal (0L)
+      scan.getTimeRange.getMax should equal (Long.MaxValue)
+
+      scan.hasFilter should be (true)
+      scan.getFilter.isInstanceOf[FilterList] should be (true)
+      val filterList = scan.getFilter.asInstanceOf[FilterList]
+      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
+      filterList.getFilters should have size(2)
+
+      val filterA = filterList.getFilters.get(1).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filterA.getFamily) should equal ("family")
+      Bytes.toString(filterA.getQualifier) should equal ("one")
+      filterA.getMaxVersions should equal (Int.MaxValue)
+      filterA.getStartTimestamp should equal (100L)
+      filterA.getStopTimestamp should equal (500L)
+
+      val filterB = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
+      Bytes.toString(filterB.getFamily) should equal ("family")
+      Bytes.toString(filterB.getQualifier) should equal ("two")
+      filterB.getMaxVersions should equal (Int.MaxValue)
+      filterB.getStartTimestamp should equal (Long.MinValue)
+      filterB.getStopTimestamp should equal (Long.MaxValue)
+    }
+
     // the scan versions must be set to max versions
     it("should add version filters for columns that have versions specified") {
       given("a builder with multiple columns with versions set")

@@ -62,6 +62,8 @@ class QueryBuilder(query : String) {
 
     val columnFilterBuilder = Seq.newBuilder[Filter]
     val allColumnsHaveTheSameNumVersions = this.columns.map(_.versions.numVersions).distinct.length == 1
+    val allColumnsHaveTimeRanges = !this.columns.exists(_.timeRange.isEmpty)
+    val anyColumnsHaveTimeRanges = this.columns.exists(!_.timeRange.isEmpty)
     for (column <- this.columns) {
       scan.addColumn(column.family, column.qualifier)
       if (!column.timeRange.isEmpty) {
@@ -70,6 +72,9 @@ class QueryBuilder(query : String) {
           column.family, column.qualifier, column.versions.numVersions, timestamps(timeRange._1), timestamps(timeRange._2))
       }
       else if (!allColumnsHaveTheSameNumVersions) {
+        columnFilterBuilder += new ColumnVersionTimerangeFilter(column.family, column.qualifier, column.versions.numVersions)
+      }
+      else if (anyColumnsHaveTimeRanges) {
         columnFilterBuilder += new ColumnVersionTimerangeFilter(column.family, column.qualifier, column.versions.numVersions)
       }
     }
@@ -117,7 +122,6 @@ class QueryBuilder(query : String) {
       // pull out the min and max timestamps in order to set the timerange on the scan
       if (!timestamps.isEmpty) {
         // only set a timerange on the scan if all columns have timeranges defined themselves
-        val allColumnsHaveTimeRanges = !this.columns.exists(_.timeRange.isEmpty)
         if (allColumnsHaveTimeRanges) {
           val minTimestamp = timestamps.minBy(_._2)._2
           val maxTimestamp = timestamps.maxBy(_._2)._2
