@@ -13,6 +13,8 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
     Bytes.toBytesBinary(string)
   }
 
+  implicit def string2Qualifier(string : String) : Qualifier = StandardQualifier(string)
+
   var builder : QueryBuilder = null
   var parser : QueryParser = null
 
@@ -154,37 +156,57 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
 
   @Test
   def testColumnQualifierMatches() {
-    runSuccessfulParse[String](parser, parser.columnQualifier, "bigData", "bigData")
+    runSuccessfulParse[Qualifier](parser, parser.columnQualifier, "bigData", StandardQualifier("bigData"))
   }
 
   @Test
   def testColumnQualifierMatchesCrazyBytes() {
     val qualifier = Bytes.toStringBinary(Array[Byte]('\100', '\24', 0xF, 0, 0x8))
-    runSuccessfulParse[String](parser, parser.columnQualifier, qualifier, qualifier)
+    runSuccessfulParse[Qualifier](parser, parser.columnQualifier, qualifier, StandardQualifier(qualifier))
   }
 
   @Test
   def testColumnQualifierMatchesCrazyCharacters() {
-    val qualifier = """abcdeABDCE01234`~!@#$%^&*()-_=+[]{}\|;:'".<>/?"""
-    runSuccessfulParse[String](parser, parser.columnQualifier, qualifier, qualifier)
+    val qualifier = """abcdeABDCE01234`~!@#$%^&()-_=+[]{}\|;:'".<>/?"""
+    runSuccessfulParse[Qualifier](parser, parser.columnQualifier, qualifier, StandardQualifier(qualifier))
   }
 
   @Test
   def testColumnQualifierStopsOnComma() {
     val qualifier = """abcdeABDCE01234,.<>/?"""
-    runFailedParse[String](parser, parser.columnQualifier, qualifier)
+    runFailedParse[Qualifier](parser, parser.columnQualifier, qualifier)
   }
 
   @Test
   def testColumnQualifierStopsOnSpace() {
     val qualifier = """abcdeABDCE01234 .<>/?"""
-    runFailedParse[String](parser, parser.columnQualifier, qualifier)
+    runFailedParse[Qualifier](parser, parser.columnQualifier, qualifier)
   }
 
   @Test
   def testColumnQualifierSkipsNonBinaryFormattedBytes() {
     val qualifier = Bytes.toString(Array[Byte]('\100', '\24', 0xF, 0, 0x8))
-    runFailedParse[String](parser, parser.columnQualifier, qualifier)
+    runFailedParse[Qualifier](parser, parser.columnQualifier, qualifier)
+  }
+
+  @Test
+  def testColumnQualifierWildcardMatches() {
+    runSuccessfulParse[Qualifier](parser, parser.columnQualifier, "*", EmptyPrefixQualifier())
+  }
+
+  @Test
+  def testColumnQualifierPrefixWildcardMatches() {
+    runSuccessfulParse[Qualifier](parser, parser.columnQualifier, "qualifier*", PrefixQualifier("qualifier"))
+  }
+
+  @Test
+  def testWildcardAtTheStartOfColumnQualifierFails() {
+    runFailedParse[Qualifier](parser, parser.columnQualifier, "*qualifier")
+  }
+
+  @Test
+  def testWildcardInTheMiddleOfColumnQualifierFails() {
+    runFailedParse[Qualifier](parser, parser.columnQualifier, "qualif*ier")
   }
 
   @Test
@@ -304,6 +326,36 @@ class TestQueryParser extends JUnitSuite with ShouldMatchersForJUnit {
       Column(family, "five", QueryVersions.All, Some(("start", "stop"))))
     val expectedRowConstraint = SingleRowConstraint("<=", "maxId")
     // "stable identifier required", so make a new val to use
+    val parserVal = parser
+    val expectedResult = new parserVal.~(new parserVal.~(expectedColumns, tableName), Some(expectedRowConstraint))
+
+    this.builder.getQueryOperation should be ('empty)
+    this.builder.getTableName should be (null)
+    this.builder.getColumns should be ('empty)
+    this.builder.getRowConstraints should be ('empty)
+    runSuccessfulParse[Any](parser, parser.query, query, expectedResult)
+    this.builder.getQueryOperation.get should equal (QueryOperation.Scan)
+    this.builder.getTableName should equal (tableName)
+    this.builder.getColumns should not be ('empty)
+    this.builder.getColumns should equal (expectedColumns.reverse)
+    this.builder.getRowConstraints should not be ('empty)
+    this.builder.getRowConstraints.head should equal (expectedRowConstraint)
+  }
+
+  @Test
+  def testQueryWithWildcardsMatches() {
+    val query = """scan d:one, 1 version of d:two, 2 versions of d:three between {start} and {stop},
+      3 versions of d:four*, all versions of d:* between {start} and {stop}, e:*, f:c* from table where rowkey = {id}"""
+    val tableName = "table"
+    val expectedColumns = List(
+      Column("d", "one"),
+      Column("d", "two", QueryVersions.One),
+      Column("d", "three", QueryVersions(2), Some(("start", "stop"))),
+      Column("d", PrefixQualifier("four"), QueryVersions(3)),
+      Column("d", EmptyPrefixQualifier(), QueryVersions.All, Some(("start", "stop"))),
+      Column("e", EmptyPrefixQualifier()),
+      Column("f", PrefixQualifier("c")))
+    val expectedRowConstraint = SingleRowConstraint("=", "id")
     val parserVal = parser
     val expectedResult = new parserVal.~(new parserVal.~(expectedColumns, tableName), Some(expectedRowConstraint))
 

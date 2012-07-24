@@ -3,6 +3,7 @@ package com.opower.hadoop.hbase.filter;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.Test;
 
@@ -10,15 +11,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tests ColumnVersionTimerangeFilter
+ * Tests QualifierPrefixColumnVersionTimerangeFilter
  *
  * @author jeff@opower.com
  */
-public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimerangeFilterTestSupport {
+public class TestQualifierPrefixColumnVersionTimerangeFilter extends AbstractColumnVersionTimerangeFilterTestSupport {
+    private static final byte[] QUALIFIER_PREFIX = Bytes.toBytes("qualifier");
+    private static final byte[] BAD_QUALIFIER_PREFIX = Bytes.toBytes("junk");
+
     @Test
     public void testAlwaysSkipsColumnThatIsNotCaredAbout() {
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, 1);
-        runFilterTest("a:a", filter, new KeyValue[] {
+        Filter filter = new QualifierPrefixColumnVersionTimerangeFilter(FAMILY_A, BAD_QUALIFIER_PREFIX, 1);
+        runFilterTest("a:junk", filter, new KeyValue[] {
             AAB,
             ABA,
             ABB,
@@ -31,19 +35,21 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
 
     @Test
     public void testConfiguredColumnIsIncluded() {
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, 1);
-        runFilterTest("a:a", filter, new KeyValue[] {
+        Filter filter = new QualifierPrefixColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_PREFIX, 1);
+        runFilterTest("a:qualifier", filter, new KeyValue[] {
             AAA,
+            AAB,
         }, new ReturnCode[] {
-            ReturnCode.INCLUDE
+            ReturnCode.INCLUDE,
+            ReturnCode.INCLUDE,
         });
     }
 
     @Test
     public void testColumnIsSkippedAfterEnoughVersionsHaveBeenFound() {
         int numVersions = 3;
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_B, numVersions);
-        runFilterTest("a:b 3 versions", filter, new KeyValue[] {
+        Filter filter = new QualifierPrefixColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_PREFIX, numVersions);
+        runFilterTest("a:qualifier 3 versions", filter, new KeyValue[] {
             AAA,
             AAB,
             AAB,
@@ -51,7 +57,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             AAB,
             ABB,
         }, new ReturnCode[] {
-            ReturnCode.SKIP,
+            ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
@@ -63,8 +69,8 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
     @Test
     public void testRowResetsColumnVersionCount() {
         int numVersions = 3;
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_B, numVersions);
-        runFilterTest("a:b 3 versions, row A", filter, new KeyValue[] {
+        Filter filter = new QualifierPrefixColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_PREFIX, numVersions);
+        runFilterTest("a:qualifier 3 versions, row A", filter, new KeyValue[] {
             AAA,
             AAB,
             AAB,
@@ -72,14 +78,14 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             AAB,
             ABB,
         }, new ReturnCode[] {
-            ReturnCode.SKIP,
+            ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.SKIP,
             ReturnCode.SKIP,
         });
-        runFilterTest("a:b 3 versions, row B", filter, new KeyValue[] {
+        runFilterTest("a:qualifier 3 versions, row B", filter, new KeyValue[] {
             BAA,
             BAB,
             BAB,
@@ -87,7 +93,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             BAB,
             BBB,
         }, new ReturnCode[] {
-            ReturnCode.SKIP,
+            ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
@@ -98,7 +104,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
 
     @Test
     public void testTimerangeRestrictsMatchingKeyValues() {
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, 1000, 100L, 200L);
+        Filter filter = new QualifierPrefixColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_PREFIX, 1000, 100L, 200L);
         List<KeyValue> keyValues = new ArrayList<KeyValue>();
         List<ReturnCode> returnCodes = new ArrayList<ReturnCode>();
         for (long ts = 90L; ts < 100L; ts++) {
@@ -113,7 +119,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             keyValues.add(new KeyValue(ROW_A, FAMILY_A, QUALIFIER_A, ts, VALUE));
             returnCodes.add(ReturnCode.SKIP);
         }
-        runFilterTest("a:a timerange restriction", filter,
+        runFilterTest("a:qualifier timerange restriction", filter,
                 keyValues.toArray(new KeyValue[0]),
                 returnCodes.toArray(new ReturnCode[0]));
     }
@@ -121,7 +127,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
     @Test
     public void testTimerangeRestrictsMatchingUpToMaxVersions() {
         int numVersions = 10;
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, numVersions, 100L, 200L);
+        Filter filter = new QualifierPrefixColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_PREFIX, numVersions, 100L, 200L);
         List<KeyValue> keyValues = new ArrayList<KeyValue>();
         List<ReturnCode> returnCodes = new ArrayList<ReturnCode>();
         for (long ts = 90L; ts < 100L; ts++) {
@@ -144,7 +150,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             keyValues.add(new KeyValue(ROW_A, FAMILY_A, QUALIFIER_A, ts, VALUE));
             returnCodes.add(ReturnCode.SKIP);
         }
-        runFilterTest("a:a timerange version restrictions", filter,
+        runFilterTest("a:qualifier timerange version restrictions", filter,
                 keyValues.toArray(new KeyValue[0]),
                 returnCodes.toArray(new ReturnCode[0]));
     }

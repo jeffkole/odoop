@@ -16,14 +16,17 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 
 import com.opower.hadoop.hbase.filter.ColumnVersionTimerangeFilter
+import com.opower.hadoop.hbase.filter.FamilyOnlyColumnVersionTimerangeFilter
+import com.opower.hadoop.hbase.filter.QualifierPrefixColumnVersionTimerangeFilter
 
 import scala.collection.JavaConverters._
 
 @RunWith(classOf[JUnitRunner])
-class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen with ShouldMatchers {
-  implicit def string2BinaryByteArray(string : String) : Array[Byte] = {
-    Bytes.toBytesBinary(string)
-  }
+class QueryBuilderSpec extends FunSpec
+  with BeforeAndAfter with GivenWhenThen with ShouldMatchers with QueryBuilderScanBehaviors {
+
+  implicit def string2BinaryByteArray(string : String) : Array[Byte] = Bytes.toBytesBinary(string)
+  implicit def string2Qualifier(string : String) : Qualifier = StandardQualifier(string)
 
   val noParameters = Map.empty[String, Array[Byte]]
   val noTimestamps = Map.empty[String, Long]
@@ -51,7 +54,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
 
   describe("Planning a scan") {
 
-    it("should leave a scan's defaults for a simple query") {
+    it("should leave the scan defaults for a simple query") {
       given("just a scan set")
       builder.scan
 
@@ -59,7 +62,7 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val scan = builder.doPlanScan(noParameters, noTimestamps)
 
       then("the scan should have all defaults set")
-      scan.getFamilies should be (null)
+      it should behave like defaultScan(scan)
     }
 
     it("should add all columns in the query to the scan") {
@@ -71,14 +74,8 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       val scan = builder.doPlanScan(noParameters, noTimestamps)
 
       then("the scan should have columns added")
-      val familyMap = scan.getFamilyMap
-      familyMap should have size (1)
-      val qualifiers = familyMap.get(Bytes.toBytesBinary("family"))
-      qualifiers should have size (2)
-      // comparison of byte arrays does not work well, so convert all to strings first
-      val stringQualifiers = qualifiers.asScala.map(Bytes.toStringBinary(_))
-      stringQualifiers should contain ("one")
-      stringQualifiers should contain ("two")
+      it should behave like scanWithFamilySet(scan, "family")
+      it should behave like scanWithQualifiersSet(scan, Map("family" -> List("one", "two")))
     }
 
     it("should add timestamp filters for columns that have timestamps specified") {
@@ -91,17 +88,101 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       then("the scan should have a filter with the timestamp set")
       scan.getTimeRange.getMin should equal (100L)
       scan.getTimeRange.getMax should equal (500L)
-      scan.hasFilter should be (true)
-      scan.getFilter.isInstanceOf[FilterList] should be (true)
-      val filterList = scan.getFilter.asInstanceOf[FilterList]
-      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
-      filterList.getFilters should have size (1)
-      val filter = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filter.getFamily) should equal ("family")
-      Bytes.toString(filter.getQualifier) should equal ("one")
-      filter.getMaxVersions should equal (1)
-      filter.getStartTimestamp should equal (100L)
-      filter.getStopTimestamp should equal (500L)
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new ColumnVersionTimerangeFilter("family", "one", 1, 100L, 500L)))
+    }
+
+    it("should set family for columns with empty prefixes") {
+      given("a builder with columns with empty prefixes")
+      builder.addColumnDefinition(Column("family", EmptyPrefixQualifier()))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should set the family")
+      it should behave like scanWithFamilySet(scan, "family")
+    }
+
+    it("should set a family prefix filter for columns with empty prefixes") {
+      given("a builder with columns with empty prefixes")
+      builder.addColumnDefinition(Column("f1", "one", QueryVersions(3)))
+      builder.addColumnDefinition(Column("f2", EmptyPrefixQualifier()))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new FamilyOnlyColumnVersionTimerangeFilter("f2", 1),
+          new ColumnVersionTimerangeFilter("f1", "one", 3)))
+    }
+
+    it("should set family and filter for columns with qualifier prefixes") {
+      given("a builder with columns with quailfier prefixes")
+      builder.addColumnDefinition(Column("family", PrefixQualifier("qual")))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      then("the scan should set the family")
+      it should behave like scanWithFamilySet(scan, "family")
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new QualifierPrefixColumnVersionTimerangeFilter("family", "qual", 1)))
+    }
+
+    it("should set a qualifier prefix filter for columns with qualifier prefixes") {
+      given("a builder with columns with qualifier prefixes")
+      builder.addColumnDefinition(Column("f1", "one", QueryVersions(3)))
+      builder.addColumnDefinition(Column("f1", PrefixQualifier("qual")))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new QualifierPrefixColumnVersionTimerangeFilter("f1", "qual", 1),
+          new ColumnVersionTimerangeFilter("f1", "one", 3)))
+    }
+
+    it("should set a qualifier prefix filter for columns with qualifier prefixes even with the same number of versions") {
+      given("a builder with columns with qualifier prefixes")
+      builder.addColumnDefinition(Column("f1", "one"))
+      builder.addColumnDefinition(Column("f1", PrefixQualifier("qual")))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new QualifierPrefixColumnVersionTimerangeFilter("f1", "qual", 1),
+          new ColumnVersionTimerangeFilter("f1", "one", 1)))
+    }
+
+    it("should set only the family if there are qualifier prefix columns in the same family") {
+      given("a builder with qualifier prefix column in family A and regular column in family A")
+      builder.addColumnDefinition(Column("A", "one"))
+      builder.addColumnDefinition(Column("A", PrefixQualifier("pre")))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      it should behave like scanWithFamilySet(scan, "A")
+      it should behave like scanWithQualifiersSet(scan, Map("A" -> Nil))
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new QualifierPrefixColumnVersionTimerangeFilter("A", "pre", 1),
+          new ColumnVersionTimerangeFilter("A", "one", 1)))
+    }
+
+    it("should set family and qualifier if there are qualifier prefix columns in different families") {
+      given("a builder with qualifier prefix column in family A and regular column in family B")
+      builder.addColumnDefinition(Column("B", "one"))
+      builder.addColumnDefinition(Column("A", PrefixQualifier("pre")))
+
+      when("a scan is planned")
+      val scan = builder.doPlanScan(noParameters, noTimestamps)
+
+      it should behave like scanWithFamiliesSet(scan, List("A", "B"))
+      it should behave like scanWithQualifiersSet(scan, Map("A" -> Nil, "B" -> List("one")))
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new QualifierPrefixColumnVersionTimerangeFilter("A", "pre", 1),
+          new ColumnVersionTimerangeFilter("B", "one", 1)))
     }
 
     it("should set the timerange on the scan if all columns have timeranges set") {
@@ -118,26 +199,10 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getTimeRange.getMin should equal (100L)
       scan.getTimeRange.getMax should equal (800L)
 
-      scan.hasFilter should be (true)
-      scan.getFilter.isInstanceOf[FilterList] should be (true)
-      val filterList = scan.getFilter.asInstanceOf[FilterList]
-      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
-      filterList.getFilters should have size (2)
-
       // the builder operates in reverse, so the columns are defined backwards
-      val filter = filterList.getFilters.get(1).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filter.getFamily) should equal ("family")
-      Bytes.toString(filter.getQualifier) should equal ("one")
-      filter.getMaxVersions should equal (1)
-      filter.getStartTimestamp should equal (100L)
-      filter.getStopTimestamp should equal (500L)
-
-      val filterB = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filterB.getFamily) should equal ("family")
-      Bytes.toString(filterB.getQualifier) should equal ("two")
-      filterB.getMaxVersions should equal (1)
-      filterB.getStartTimestamp should equal (300L)
-      filterB.getStopTimestamp should equal (800L)
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new ColumnVersionTimerangeFilter("family", "two", 1, 300L, 800L),
+          new ColumnVersionTimerangeFilter("family", "one", 1, 100L, 500L)))
     }
 
     it("should not set the timerange on the scan if there is a mix of timeranges on columns") {
@@ -168,25 +233,10 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getTimeRange.getMin should equal (0L)
       scan.getTimeRange.getMax should equal (Long.MaxValue)
 
-      scan.hasFilter should be (true)
-      scan.getFilter.isInstanceOf[FilterList] should be (true)
-      val filterList = scan.getFilter.asInstanceOf[FilterList]
-      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
-      filterList.getFilters should have size(2)
-
-      val filterA = filterList.getFilters.get(1).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filterA.getFamily) should equal ("family")
-      Bytes.toString(filterA.getQualifier) should equal ("one")
-      filterA.getMaxVersions should equal (Int.MaxValue)
-      filterA.getStartTimestamp should equal (100L)
-      filterA.getStopTimestamp should equal (500L)
-
-      val filterB = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filterB.getFamily) should equal ("family")
-      Bytes.toString(filterB.getQualifier) should equal ("two")
-      filterB.getMaxVersions should equal (Int.MaxValue)
-      filterB.getStartTimestamp should equal (Long.MinValue)
-      filterB.getStopTimestamp should equal (Long.MaxValue)
+      // the builder operates in reverse, so the columns are defined backwards
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(new ColumnVersionTimerangeFilter("family", "two", Int.MaxValue, Long.MinValue, Long.MaxValue),
+          new ColumnVersionTimerangeFilter("family", "one", Int.MaxValue, 100L, 500L)))
     }
 
     // the scan versions must be set to max versions
@@ -203,32 +253,13 @@ class QueryBuilderSpec extends FunSpec with BeforeAndAfter with GivenWhenThen wi
       scan.getMaxVersions should equal(Int.MaxValue)
       scan.getTimeRange.getMin should equal (0)
       scan.getTimeRange.getMax should equal (Long.MaxValue)
-      scan.hasFilter should be (true)
-      scan.getFilter.isInstanceOf[FilterList] should be (true)
-      val filterList = scan.getFilter.asInstanceOf[FilterList]
-      filterList.getOperator should equal (FilterList.Operator.MUST_PASS_ONE)
-      filterList.getFilters should have size(3)
 
-      val filterA = filterList.getFilters.get(2).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filterA.getFamily) should equal ("family")
-      Bytes.toString(filterA.getQualifier) should equal ("one")
-      filterA.getMaxVersions should equal (5)
-      filterA.getStartTimestamp should equal (Long.MinValue)
-      filterA.getStopTimestamp should equal (Long.MaxValue)
-
-      val filterB = filterList.getFilters.get(1).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filterB.getFamily) should equal ("family")
-      Bytes.toString(filterB.getQualifier) should equal ("two")
-      filterB.getMaxVersions should equal (1)
-      filterB.getStartTimestamp should equal (Long.MinValue)
-      filterB.getStopTimestamp should equal (Long.MaxValue)
-
-      val filterC = filterList.getFilters.get(0).asInstanceOf[ColumnVersionTimerangeFilter]
-      Bytes.toString(filterC.getFamily) should equal ("family")
-      Bytes.toString(filterC.getQualifier) should equal ("three")
-      filterC.getMaxVersions should equal (Int.MaxValue)
-      filterC.getStartTimestamp should equal (Long.MinValue)
-      filterC.getStopTimestamp should equal (Long.MaxValue)
+      // the builder operates in reverse, so the columns are defined backwards
+      it should behave like scanWithFilterList(scan, FilterList.Operator.MUST_PASS_ONE,
+        List(
+          new ColumnVersionTimerangeFilter("family", "three", Int.MaxValue, Long.MinValue, Long.MaxValue),
+          new ColumnVersionTimerangeFilter("family", "two", 1, Long.MinValue, Long.MaxValue),
+          new ColumnVersionTimerangeFilter("family", "one", 5, Long.MinValue, Long.MaxValue)))
     }
 
     it("should not set version filters on columns if all of the column versions are the same") {

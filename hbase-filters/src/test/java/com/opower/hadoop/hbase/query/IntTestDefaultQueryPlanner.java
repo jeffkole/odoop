@@ -303,6 +303,70 @@ public class IntTestDefaultQueryPlanner {
         runScanAssertions(query, expectedResults, 1);
     }
 
+    @Test
+    public void testFamilyOnlyColumnScan() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan 2 versions of familyA:*, 4 versions of familyB:* from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "cherry");
+        Object[][] expectedResults = new Object[][] {
+            { "cherry", "familyA", "fiveValues",   500L, "cherry-fiveValues-4" },
+            { "cherry", "familyA", "fiveValues",   400L, "cherry-fiveValues-3" },
+            { "cherry", "familyA", "oneValueA",    100L, "cherry-oneValueA-0" },
+            { "cherry", "familyA", "oneValueB",  10000L, "cherry-oneValueB-0" },
+            { "cherry", "familyA", "tenValuesA",  1090L, "cherry-tenValuesA-9" },
+            { "cherry", "familyA", "tenValuesA",  1080L, "cherry-tenValuesA-8" },
+            { "cherry", "familyA", "tenValuesB", 10000L, "cherry-tenValuesB-9" },
+            { "cherry", "familyA", "tenValuesB",  9000L, "cherry-tenValuesB-8" },
+
+            { "cherry", "familyB", "fiveValues",   500L, "cherry-fiveValues-4" },
+            { "cherry", "familyB", "fiveValues",   400L, "cherry-fiveValues-3" },
+            { "cherry", "familyB", "fiveValues",   300L, "cherry-fiveValues-2" },
+            { "cherry", "familyB", "fiveValues",   200L, "cherry-fiveValues-1" },
+            { "cherry", "familyB", "oneValueA",    100L, "cherry-oneValueA-0" },
+            { "cherry", "familyB", "oneValueB",  10000L, "cherry-oneValueB-0" },
+            { "cherry", "familyB", "tenValuesA",  1090L, "cherry-tenValuesA-9" },
+            { "cherry", "familyB", "tenValuesA",  1080L, "cherry-tenValuesA-8" },
+            { "cherry", "familyB", "tenValuesA",  1070L, "cherry-tenValuesA-7" },
+            { "cherry", "familyB", "tenValuesA",  1060L, "cherry-tenValuesA-6" },
+            { "cherry", "familyB", "tenValuesB", 10000L, "cherry-tenValuesB-9" },
+            { "cherry", "familyB", "tenValuesB",  9000L, "cherry-tenValuesB-8" },
+            { "cherry", "familyB", "tenValuesB",  8000L, "cherry-tenValuesB-7" },
+            { "cherry", "familyB", "tenValuesB",  7000L, "cherry-tenValuesB-6" },
+        };
+        runScanAssertions(query, expectedResults, 1);
+    }
+
+    @Test
+    public void testQualiferPrefixColumnScan() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan familyA:oneValue*, familyA:fiveValues from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "cherry");
+        Object[][] expectedResults = new Object[][] {
+            { "cherry", "familyA", "fiveValues",   500L, "cherry-fiveValues-4" },
+            { "cherry", "familyA", "oneValueA",    100L, "cherry-oneValueA-0" },
+            { "cherry", "familyA", "oneValueB",  10000L, "cherry-oneValueB-0" },
+        };
+        runScanAssertions(query, expectedResults, 1);
+    }
+
+    /**
+     * The Scan resets familyMap values when addFamily is called, so the column order
+     * can have an effect on how the Scan is configured.  Test to make sure the builder
+     * is immune to that.
+     */
+    @Test
+    public void testQualiferPrefixColumnScanOppositeOrder() throws Exception {
+        Query query = this.queryPlanner.parse(
+                "scan familyA:fiveValues, familyA:oneValue* from " + TABLE_NAME + " where rowkey = {id}");
+        query.setString("id", "cherry");
+        Object[][] expectedResults = new Object[][] {
+            { "cherry", "familyA", "fiveValues",   500L, "cherry-fiveValues-4" },
+            { "cherry", "familyA", "oneValueA",    100L, "cherry-oneValueA-0" },
+            { "cherry", "familyA", "oneValueB",  10000L, "cherry-oneValueB-0" },
+        };
+        runScanAssertions(query, expectedResults, 1);
+    }
+
     private void runScanAssertions(Query query, Object[][] expectedResults, int expectedRowCount) throws Exception {
         assertThat("query is not null", query, is(notNullValue()));
         int rowCount = 0;
@@ -312,8 +376,7 @@ public class IntTestDefaultQueryPlanner {
             scanner = query.scan();
             assertThat("scanner is not null", scanner, is(notNullValue()));
             int resultIndex = 0;
-            Result result = null;
-            while ((result = scanner.next()) != null) {
+            for (Result result : scanner) {
                 KeyValue[] keyValues = result.raw();
                 keyValueCount += keyValues.length;
                 for (int i = 0; i < keyValues.length; i++) {
@@ -322,15 +385,20 @@ public class IntTestDefaultQueryPlanner {
                     String expectedQualifier = (String)expectedResults[resultIndex][2];
                     long expectedTimestamp   = (Long)expectedResults[resultIndex][3];
                     String expectedValue     = (String)expectedResults[resultIndex][4];
-                    assertThat(rowCount + " row key matches",
+
+                    String expectedKV = expectedRowKey + "/" + expectedFamily + ":" +
+                        expectedQualifier + "/" + expectedTimestamp;
+                    String msg = " matches: " + expectedKV + " vs. " + keyValues[i];
+
+                    assertThat("row key" + msg,
                             Bytes.toString(keyValues[i].getRow()),       is(expectedRowKey));
-                    assertThat(rowCount + " family matches",
+                    assertThat("family" + msg,
                             Bytes.toString(keyValues[i].getFamily()),    is(expectedFamily));
-                    assertThat(rowCount + " qualifier matches",
+                    assertThat("qualifier" + msg,
                             Bytes.toString(keyValues[i].getQualifier()), is(expectedQualifier));
-                    assertThat(rowCount + " timestamp matches",
+                    assertThat("timestamp" + msg,
                             keyValues[i].getTimestamp(),                 is(expectedTimestamp));
-                    assertThat(rowCount + " value matches",
+                    assertThat("value" + msg,
                             Bytes.toString(keyValues[i].getValue()),     is(expectedValue));
                     resultIndex++;
                 }

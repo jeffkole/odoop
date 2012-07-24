@@ -10,17 +10,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tests ColumnVersionTimerangeFilter
+ * Tests FamilyOnlyColumnVersionTimerangeFilter
  *
  * @author jeff@opower.com
  */
-public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimerangeFilterTestSupport {
+public class TestFamilyOnlyColumnVersionTimerangeFilter extends AbstractColumnVersionTimerangeFilterTestSupport {
     @Test
     public void testAlwaysSkipsColumnThatIsNotCaredAbout() {
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, 1);
-        runFilterTest("a:a", filter, new KeyValue[] {
-            AAB,
+        Filter filter = new FamilyOnlyColumnVersionTimerangeFilter(FAMILY_A, 1);
+        runFilterTest("a", filter, new KeyValue[] {
             ABA,
+            ABB,
             ABB,
         }, new ReturnCode[] {
             ReturnCode.SKIP,
@@ -31,8 +31,8 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
 
     @Test
     public void testConfiguredColumnIsIncluded() {
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, 1);
-        runFilterTest("a:a", filter, new KeyValue[] {
+        Filter filter = new FamilyOnlyColumnVersionTimerangeFilter(FAMILY_A, 1);
+        runFilterTest("a", filter, new KeyValue[] {
             AAA,
         }, new ReturnCode[] {
             ReturnCode.INCLUDE
@@ -42,8 +42,8 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
     @Test
     public void testColumnIsSkippedAfterEnoughVersionsHaveBeenFound() {
         int numVersions = 3;
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_B, numVersions);
-        runFilterTest("a:b 3 versions", filter, new KeyValue[] {
+        Filter filter = new FamilyOnlyColumnVersionTimerangeFilter(FAMILY_A, numVersions);
+        runFilterTest("a 3 versions", filter, new KeyValue[] {
             AAA,
             AAB,
             AAB,
@@ -51,7 +51,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             AAB,
             ABB,
         }, new ReturnCode[] {
-            ReturnCode.SKIP,
+            ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
@@ -63,8 +63,8 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
     @Test
     public void testRowResetsColumnVersionCount() {
         int numVersions = 3;
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_B, numVersions);
-        runFilterTest("a:b 3 versions, row A", filter, new KeyValue[] {
+        Filter filter = new FamilyOnlyColumnVersionTimerangeFilter(FAMILY_A, numVersions);
+        runFilterTest("a 3 versions, row A", filter, new KeyValue[] {
             AAA,
             AAB,
             AAB,
@@ -72,14 +72,14 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             AAB,
             ABB,
         }, new ReturnCode[] {
-            ReturnCode.SKIP,
+            ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.SKIP,
             ReturnCode.SKIP,
         });
-        runFilterTest("a:b 3 versions, row B", filter, new KeyValue[] {
+        runFilterTest("a 3 versions, row B", filter, new KeyValue[] {
             BAA,
             BAB,
             BAB,
@@ -87,7 +87,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             BAB,
             BBB,
         }, new ReturnCode[] {
-            ReturnCode.SKIP,
+            ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
             ReturnCode.INCLUDE,
@@ -98,7 +98,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
 
     @Test
     public void testTimerangeRestrictsMatchingKeyValues() {
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, 1000, 100L, 200L);
+        Filter filter = new FamilyOnlyColumnVersionTimerangeFilter(FAMILY_A, 1000, 100L, 200L);
         List<KeyValue> keyValues = new ArrayList<KeyValue>();
         List<ReturnCode> returnCodes = new ArrayList<ReturnCode>();
         for (long ts = 90L; ts < 100L; ts++) {
@@ -113,7 +113,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             keyValues.add(new KeyValue(ROW_A, FAMILY_A, QUALIFIER_A, ts, VALUE));
             returnCodes.add(ReturnCode.SKIP);
         }
-        runFilterTest("a:a timerange restriction", filter,
+        runFilterTest("a timerange restriction", filter,
                 keyValues.toArray(new KeyValue[0]),
                 returnCodes.toArray(new ReturnCode[0]));
     }
@@ -121,7 +121,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
     @Test
     public void testTimerangeRestrictsMatchingUpToMaxVersions() {
         int numVersions = 10;
-        Filter filter = new ColumnVersionTimerangeFilter(FAMILY_A, QUALIFIER_A, numVersions, 100L, 200L);
+        Filter filter = new FamilyOnlyColumnVersionTimerangeFilter(FAMILY_A, numVersions, 100L, 200L);
         List<KeyValue> keyValues = new ArrayList<KeyValue>();
         List<ReturnCode> returnCodes = new ArrayList<ReturnCode>();
         for (long ts = 90L; ts < 100L; ts++) {
@@ -144,7 +144,7 @@ public class TestColumnVersionTimerangeFilter extends AbstractColumnVersionTimer
             keyValues.add(new KeyValue(ROW_A, FAMILY_A, QUALIFIER_A, ts, VALUE));
             returnCodes.add(ReturnCode.SKIP);
         }
-        runFilterTest("a:a timerange version restrictions", filter,
+        runFilterTest("a timerange version restrictions", filter,
                 keyValues.toArray(new KeyValue[0]),
                 returnCodes.toArray(new ReturnCode[0]));
     }

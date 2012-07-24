@@ -12,7 +12,8 @@ The currently implemented grammar is as follows (case sensitive):
     column            := [ version ] family ":" qualifier [ timeRange ]
     version           := "all versions of" | positiveNumber "versions of"
     family            := /\w+/
-    qualifier         := /(\w|0x[0-9a-fA-F]{2})+/
+    qualifier         := literal | literal "*" | "*"
+    literal           := /([a-zA-Z0-9`~!@#$%^&()\-_=+\[\]\{\}\\|;:'".<>/?]|(\\x[0-9]{2}))+/
     timeRange         := "between" parameter "and" parameter
     tableName         := /\w[\w\-.]*/
     rowKeyConstraint  := ( "rowkey" rowKeyOperator parameter | "rowkey between" parameter "and" parameter )

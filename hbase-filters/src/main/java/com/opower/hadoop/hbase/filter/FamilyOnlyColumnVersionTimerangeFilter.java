@@ -15,48 +15,47 @@ import java.io.IOException;
  *
  * @author jeff@opower.com
  */
-public class ColumnVersionTimerangeFilter extends AbstractColumnVersionTimerangeFilter {
+public class FamilyOnlyColumnVersionTimerangeFilter extends AbstractColumnVersionTimerangeFilter {
     private byte[] family;
-    private byte[] qualifier;
 
-    public ColumnVersionTimerangeFilter() {
+    private byte[] currentBuffer = new byte[0];
+    private int currentQualifierOffset = 0;
+    private int currentQualifierLength = 0;
+
+    public FamilyOnlyColumnVersionTimerangeFilter() {
         super();
     }
 
     /**
-     * Create a filter based on the family, qualifier, and maximum number of versions to
+     * Create a filter based on the family and maximum number of versions to
      * return.  The timerange will be effectiely ignored.
      *
      * @param family
-     * @param qualifier
      * @param maxVersions
      */
-    public ColumnVersionTimerangeFilter(byte[] family, byte[] qualifier, int maxVersions) {
-        this(family, qualifier, maxVersions, Long.MIN_VALUE, Long.MAX_VALUE);
+    public FamilyOnlyColumnVersionTimerangeFilter(byte[] family, int maxVersions) {
+        this(family, maxVersions, Long.MIN_VALUE, Long.MAX_VALUE);
     }
 
     /**
-     * Create a filter based on the family, qualifier, maximum number of versions, and a
+     * Create a filter based on the family, maximum number of versions, and a
      * timerange to check.  The timerange is inclusive at the beginning and exclusive on
      * the end: {@code [start, stop)}.
      *
      * @param family
-     * @param qualifier
      * @param maxVersions
      * @param start
      * @param stop
      */
-    public ColumnVersionTimerangeFilter(byte[] family, byte[] qualifier, int maxVersions, long start, long stop) {
+    public FamilyOnlyColumnVersionTimerangeFilter(byte[] family, int maxVersions, long start, long stop) {
         super(maxVersions, start, stop);
         this.family = family;
-        this.qualifier = qualifier;
     }
 
     @Override
     public String toString() {
         return Objects.toStringHelper(this)
             .add("family", Bytes.toStringBinary(this.family))
-            .add("qualifier", Bytes.toStringBinary(this.qualifier))
             .add("maxVersions", getMaxVersions())
             .add("start", getStartTimestamp())
             .add("stop", getStopTimestamp())
@@ -67,31 +66,33 @@ public class ColumnVersionTimerangeFilter extends AbstractColumnVersionTimerange
         return this.family;
     }
 
-    public byte[] getQualifier() {
-        return this.qualifier;
-    }
-
     @Override
     protected boolean includeFamilyAndQualifier(KeyValue keyValue) {
-        // include the key/value if it matches the family/qualifer we care about
-        return keyValue.matchingColumn(this.family, this.qualifier);
+        // include the key/value if it matches the family we care about
+        return keyValue.matchingFamily(this.family);
     }
 
     @Override
     protected boolean resetVersionCount(KeyValue keyValue) {
-        // resetting the version count for each row is sufficient, so do no extra work
-        return false;
+        // reset the version count each time the qualifier changes
+        boolean sameQualifier =
+            keyValue.matchingQualifier(this.currentBuffer, this.currentQualifierOffset, this.currentQualifierLength);
+        if (sameQualifier) {
+            return false;
+        }
+        this.currentBuffer = keyValue.getBuffer();
+        this.currentQualifierOffset = keyValue.getQualifierOffset();
+        this.currentQualifierLength = keyValue.getQualifierLength();
+        return true;
     }
 
     public void write(DataOutput out) throws IOException {
         super.write(out);
         Bytes.writeByteArray(out, this.family);
-        Bytes.writeByteArray(out, this.qualifier);
     }
 
     public void readFields(DataInput in) throws IOException {
         super.readFields(in);
         this.family = Bytes.readByteArray(in);
-        this.qualifier = Bytes.readByteArray(in);
     }
 }

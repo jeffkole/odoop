@@ -28,8 +28,7 @@
             <directory>${project.build.outputDirectory}</directory>
             <outputDirectory></outputDirectory>
             <includes>
-                <include>com/opower/hadoop/hbase/filter/ColumnVersionTimerangeFilter.class</include>
-                <include>com/opower/hadoop/hbase/filter/DeployedFilter*.class</include>
+                <include>com/opower/hadoop/hbase/filter/*.class</include>
             </includes>
         </fileSet>
     </fileSets>

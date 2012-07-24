@@ -14,10 +14,7 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
 
   def columnDefinition : Parser[Column] = versionDefinition.? ~ columnFamily ~ ":" ~ columnQualifier ~ timeRange.? ^^ {
     case versions ~ family ~ ":" ~ qualifier ~ time => {
-      val column = Column(Bytes.toBytesBinary(family),
-                          Bytes.toBytesBinary(qualifier),
-                          versions.getOrElse(QueryVersions.One),
-                          time)
+      val column = Column(family, qualifier, versions.getOrElse(QueryVersions.One), time)
       this.queryBuilder.addColumnDefinition(column)
       column
     }
@@ -40,7 +37,13 @@ protected[query] class QueryParser(private val queryBuilder : QueryBuilder) exte
    */
   // TODO: handle commas in the qualifier name, which currently break parsing done by repsep(columnDefinition, ",")
   // TODO: handle spaces in the qualifier name, which break parsing the rest of the line
-  def columnQualifier : Parser[String] = """([a-zA-Z0-9`~!@#$%^&*()\-_=+\[\]\{\}\\|;:'".<>/?]|(\\x[0-9]{2}))+""".r
+  def columnQualifier : Parser[Qualifier] = {
+    ("*" ^^ { _ => EmptyPrefixQualifier() }) |
+    (literal ~ "*" ^^ { case q ~ "*" => PrefixQualifier(q) }) |
+    (literal ^^ { q => StandardQualifier(q) })
+  }
+
+  def literal : Parser[String] = """([a-zA-Z0-9`~!@#$%^&()\-_=+\[\]\{\}\\|;:'".<>/?]|(\\x[0-9]{2}))+""".r
 
   def timeRange : Parser[(String, String)] = "between" ~ parameter ~ "and" ~ parameter ^^ {
     case _ ~ a ~ _ ~ b => (a, b)

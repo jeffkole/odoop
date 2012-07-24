@@ -14,6 +14,8 @@ import scala.collection.mutable
 import scala.collection.immutable
 
 import com.opower.hadoop.hbase.filter.ColumnVersionTimerangeFilter
+import com.opower.hadoop.hbase.filter.FamilyOnlyColumnVersionTimerangeFilter
+import com.opower.hadoop.hbase.filter.QualifierPrefixColumnVersionTimerangeFilter
 
 object QueryBuilder {
   def parse(query : String) : QueryBuilder = {
@@ -64,21 +66,73 @@ class QueryBuilder(query : String) {
     val allColumnsHaveTheSameNumVersions = this.columns.map(_.versions.numVersions).distinct.length == 1
     val allColumnsHaveTimeRanges = !this.columns.exists(_.timeRange.isEmpty)
     val anyColumnsHaveTimeRanges = this.columns.exists(!_.timeRange.isEmpty)
+    val anyColumnsHaveQualifierPrefixes = this.columns.exists(_.qualifier.isInstanceOf[PrefixQualifier])
+    val filterRequired = !allColumnsHaveTheSameNumVersions || anyColumnsHaveTimeRanges || anyColumnsHaveQualifierPrefixes
+    val familiesWithQualifierPrefixes = this.columns.filter(_.qualifier.isInstanceOf[PrefixQualifier]).map(_.family)
+
     for (column <- this.columns) {
-      scan.addColumn(column.family, column.qualifier)
-      if (!column.timeRange.isEmpty) {
-        val timeRange = column.timeRange.get
-        columnFilterBuilder += new ColumnVersionTimerangeFilter(
-          column.family, column.qualifier, column.versions.numVersions, timestamps(timeRange._1), timestamps(timeRange._2))
-      }
-      else if (!allColumnsHaveTheSameNumVersions) {
-        columnFilterBuilder += new ColumnVersionTimerangeFilter(column.family, column.qualifier, column.versions.numVersions)
-      }
-      else if (anyColumnsHaveTimeRanges) {
-        columnFilterBuilder += new ColumnVersionTimerangeFilter(column.family, column.qualifier, column.versions.numVersions)
+      implicit def string2BytesBinary(string : String) : Array[Byte] = Bytes.toBytesBinary(string)
+      column match {
+        case Column(f, StandardQualifier(q), QueryVersions(n), Some((a, b))) => {
+          // if any column has a qualifier prefix in the same family, then only add the family
+          if (familiesWithQualifierPrefixes.contains(f)) {
+            scan.addFamily(f)
+          }
+          else {
+            scan.addColumn(f, q)
+          }
+          columnFilterBuilder += new ColumnVersionTimerangeFilter(f, q, n, timestamps(a), timestamps(b))
+        }
+        case Column(f, StandardQualifier(q), QueryVersions(n), None) => {
+          // if any column has a qualifier prefix in the same family, then only add the family
+          if (familiesWithQualifierPrefixes.contains(f)) {
+            scan.addFamily(f)
+          }
+          else {
+            scan.addColumn(f, Bytes.toBytesBinary(q))
+          }
+          if (filterRequired) {
+            columnFilterBuilder += new ColumnVersionTimerangeFilter(f, q, n)
+          }
+        }
+        case Column(f, PrefixQualifier(q), QueryVersions(n), Some((a, b))) => {
+          scan.addFamily(f)
+          columnFilterBuilder += new QualifierPrefixColumnVersionTimerangeFilter(f, q, n, timestamps(a), timestamps(b))
+        }
+        case Column(f, PrefixQualifier(q), QueryVersions(n), None) => {
+          scan.addFamily(f)
+          columnFilterBuilder += new QualifierPrefixColumnVersionTimerangeFilter(f, q, n )
+        }
+        case Column(f, EmptyPrefixQualifier(), QueryVersions(n), Some((a, b))) => {
+          scan.addFamily(f)
+          columnFilterBuilder += new FamilyOnlyColumnVersionTimerangeFilter(f, n, timestamps(a), timestamps(b))
+        }
+        case Column(f, EmptyPrefixQualifier(), QueryVersions(n), None) => {
+          scan.addFamily(f)
+          if (filterRequired) {
+            columnFilterBuilder += new FamilyOnlyColumnVersionTimerangeFilter(f, n)
+          }
+        }
+        case Column(_, EmptyQualifier(), _, _) => {
+          throw new IllegalArgumentException("Cannot handle empty column qualifiers")
+        }
       }
     }
     val columnFilters = columnFilterBuilder.result
+
+    if (!this.columns.isEmpty) {
+      // pull out the min and max timestamps in order to set the timerange on the scan
+      if (!timestamps.isEmpty) {
+        // only set a timerange on the scan if all columns have timeranges defined themselves
+        if (allColumnsHaveTimeRanges) {
+          val minTimestamp = timestamps.minBy(_._2)._2
+          val maxTimestamp = timestamps.maxBy(_._2)._2
+          scan.setTimeRange(minTimestamp, maxTimestamp)
+        }
+      }
+      // set the max versions to max requested of all columns
+      scan.setMaxVersions(this.columns.maxBy(_.versions.numVersions).versions.numVersions)
+    }
 
     var rowFilter : Option[Filter] = None
     for (rowConstraint <- this.rowConstraints) {
@@ -118,19 +172,6 @@ class QueryBuilder(query : String) {
       scan.setFilter(rowFilter.get)
     }
 
-    if (!this.columns.isEmpty) {
-      // pull out the min and max timestamps in order to set the timerange on the scan
-      if (!timestamps.isEmpty) {
-        // only set a timerange on the scan if all columns have timeranges defined themselves
-        if (allColumnsHaveTimeRanges) {
-          val minTimestamp = timestamps.minBy(_._2)._2
-          val maxTimestamp = timestamps.maxBy(_._2)._2
-          scan.setTimeRange(minTimestamp, maxTimestamp)
-        }
-      }
-      // set the max versions to max requested of all columns
-      scan.setMaxVersions(this.columns.maxBy(_.versions.numVersions).versions.numVersions)
-    }
     scan
   }
 
