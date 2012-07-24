@@ -6,6 +6,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.math.BigDecimal;
@@ -52,6 +54,9 @@ public class DefaultQuery implements Query {
                         this.parameters, this.timestamps));
         }
         Scan scan = this.queryBuilder.planScan(this.parameters, this.timestamps);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Scan: %s, filter: %s", scan, inspectFilter(scan.getFilter())));
+        }
         if (LOG.isTraceEnabled()) {
             LOG.trace(String.format("Getting table named '%s'", this.queryBuilder.getTableName()));
         }
@@ -112,5 +117,23 @@ public class DefaultQuery implements Query {
     public Query setStringBinary(String parameter, String value) {
         this.parameters.put(parameter, Bytes.toBytesBinary(value));
         return this;
+    }
+
+    private static String inspectFilter(Filter filter) {
+        if (filter == null) {
+            return "null";
+        }
+        if (filter instanceof FilterList) {
+            return inspectFilter((FilterList)filter);
+        }
+        return filter.toString();
+    }
+
+    private static String inspectFilter(FilterList filterList) {
+        StringBuilder buf = new StringBuilder();
+        for (Filter filter : filterList.getFilters()) {
+            buf.append(inspectFilter(filter)).append(", ");
+        }
+        return "FilterList(" + filterList.getOperator() + ") {" + buf + "}";
     }
 }

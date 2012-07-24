@@ -57,6 +57,17 @@ public class ColumnVersionTimerangeFilter extends FilterBase {
         this.stop = stop;
     }
 
+    @Override
+    public String toString() {
+        return com.google.common.base.Objects.toStringHelper(this)
+            .add("family", Bytes.toStringBinary(this.family))
+            .add("qualifier", Bytes.toStringBinary(this.qualifier))
+            .add("maxVersions", this.maxVersions)
+            .add("start", this.start)
+            .add("stop", this.stop)
+            .toString();
+    }
+
     public byte[] getFamily() {
         return this.family;
     }
