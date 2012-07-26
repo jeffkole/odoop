@@ -8,6 +8,6 @@ if [ -d $TARGET_DIR ]; then
         # Echo to stderr, because the output here comes out when you run "hbase classpath"
         # and this is not usable as a classpath
         echo "Including hbase-filters jar in HBase classpath" 1>&2
-        export HBASE_CLASSPATH="$FILTER_JAR"
+        export HBASE_CLASSPATH="$FILTER_JAR":${HBASE_CLASSPATH}
     fi
 fi
