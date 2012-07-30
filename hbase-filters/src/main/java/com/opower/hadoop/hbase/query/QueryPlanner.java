@@ -11,7 +11,8 @@ import java.io.Closeable;
         Configuration configuration = HBaseConfiguration.create();
         HTablePool pool = new HTablePool(configuration, maxPoolSize);
         QueryPlanner planner = new DefaultQueryPlanner(pool);
-        Query query = planner.parse("scan all versions of d:purchases between {start} and {stop} from customers where rowkey = {id}");
+        Query query = planner.parse("scan all versions of d:purchases between {start} and {stop} " +
+            "from customers where rowkey = {id}");
         query.setTimestamp("start", new DateMidnight("2012-01-01").toMillis())
             .setTimestamp("stop", new DateMidnight("2012-02-01").toMillis())
             .setString("id", customerId);
