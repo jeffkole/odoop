@@ -18,7 +18,7 @@ import java.util.Collection;
 /**
  * A {@link Selector} that checks for the existence of a row key in a set, giving functionality similar to that of
  * an "in" clause in SQL.
- *
+ * </p><p>
  * This implementation is based on a bloom filter, so more specifically it filters out rows that are definitely
  * not in the set.  You could consider it a "not not in set" filter, in that regard, though thinking of it as a
  * filter that returns rows that are in the filter plus some that may not be is probably a more sane way of

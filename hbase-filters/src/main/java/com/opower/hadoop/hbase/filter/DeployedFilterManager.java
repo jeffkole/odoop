@@ -19,7 +19,31 @@ import com.opower.common.reflect.Reflection;
 import com.opower.hadoop.fs.HdfsClassLoader;
 
 /**
- * Responsible for managing the lifecycle of a {@link DeployedFilter} and more importantly, the {@link Filter} it wraps.
+ * Responsible for managing the lifecycle of a {@link DeployedFilter} and, more importantly, the {@link Filter} it wraps.
+ * </p><p>
+ * Example usage:
+ * </p>
+ * <pre>
+        Configuration configuration = HBaseConfiguration.create();
+        DeployedFilterManager filterManager = new DeployedFilterManager(configuration);
+        DeployedFilter filter = filterManager.deployFilter(new NonStandardFilter());
+
+        Scan scan = new Scan();
+        scan.setFilter(filter);
+
+        try {
+            HTable table = new HTable(configuration, tableName);
+            ResultScanner scanner = table.getScanner(scan);
+            for (Result result : scanner) {
+                KeyValue[] kvs = result.raw();
+            }
+            scanner.close();
+        }
+        finally {
+            filterManager.undeployFilter(filter);
+            HConnectionManager.deleteConnection(configuration, true);
+        }
+ * </pre>
  *
  * @author jeff@opower.com
  */

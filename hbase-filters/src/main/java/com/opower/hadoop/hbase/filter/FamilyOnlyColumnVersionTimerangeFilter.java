@@ -10,8 +10,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * Filters a column based on a timerange and number of versions, specifically meant to
- * implement the column selection functionality of the Query Planner.
+ * Filters a column specified by family and based on a timerange and number of versions,
+ * specifically meant to implement the column selection functionality of the Query Planner.
  *
  * @author jeff@opower.com
  */

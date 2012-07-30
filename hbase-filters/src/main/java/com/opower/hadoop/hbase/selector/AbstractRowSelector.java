@@ -10,11 +10,11 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
  */
 public abstract class AbstractRowSelector implements Selector {
     /**
+     * {@inheritDoc}
+     * </p><p>
      * Always indicates that the key/value should be included, because the real logic
      * will be implemented in {@link Selector#includeRow(byte[], int, int)} to determine
      * if the row should be included or not.
-     *
-     * {@inheritDoc}
      */
     @Override
     public final ReturnCode handleKeyValue(KeyValue keyValue) {

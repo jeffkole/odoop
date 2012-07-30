@@ -15,15 +15,15 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
 /**
- * A {@link java.lang.ClassLoader} that reads its class data from a jar file stored in HDFS.
+ * A {@link ClassLoader} that reads its class data from a jar file stored in HDFS.
  *
  * @author jeff@opower.com
  */
 public class HdfsClassLoader extends ClassLoader {
     /**
      * A configuration option to indicate whether or not to skip the standard {@link ClassLoader} hierarchical
-     * search and look at the configured jar first.  Defaults to false so that the standard search is performed,
-     * but it may be helpful to turn to true for debugging.
+     * search and look at the configured jar first.  Defaults to {@code false} so that the standard search is performed,
+     * but it may be helpful to turn to {@code true} for debugging.
      */
     public static final String ATTEMPT_LOCAL_LOAD_FIRST = "hdfs.classloader.attemptLocalFirst";
 

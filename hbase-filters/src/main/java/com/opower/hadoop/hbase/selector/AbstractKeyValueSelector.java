@@ -11,9 +11,10 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
  */
 public abstract class AbstractKeyValueSelector implements Selector {
     /**
-     * Always includes the row
-     *
      * {@inheritDoc}
+     * </p><p>
+     * Always includes the row.
+     *
      */
     @Override
     public boolean includeRow(byte[] buffer, int offset, int length) {
@@ -24,8 +25,6 @@ public abstract class AbstractKeyValueSelector implements Selector {
      * Will include the key/value if {@link #includeKeyValue} returns true; otheriwse
      * the key/value is skipped.  Note that there is no way to give a hint to the scanner,
      * skip to the next column, or skip to the next row.
-     *
-     * {@inheritDoc}
      */
     @Override
     public final ReturnCode handleKeyValue(KeyValue keyValue) {
