@@ -29,4 +29,29 @@
         <developerConnection>scm:git:</developerConnection>
     </scm>
     -->
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.8.1</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <detectLinks>true</detectLinks>
+                    <encoding>UTF-8</encoding>
+                    <links>
+                        <link>http://hbase.apache.org/apidocs</link>
+                        <link>http://hadoop.apache.org/common/docs/r0.20.2/api</link>
+                        <link>http://kentbeck.github.com/junit/javadoc/latest</link>
+                    </links>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
