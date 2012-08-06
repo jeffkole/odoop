@@ -1,4 +1,8 @@
-# Release notes for Odoop
+---
+title: Release Notes
+---
+
+# {{ page.title }}
 
 ### 0.0.2
 

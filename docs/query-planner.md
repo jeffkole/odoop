@@ -1,6 +1,10 @@
-# Query Planner
+---
+title: Query Planner
+---
 
-## Query Grammar
+# {{ page.title }}
+
+### Query Grammar
 
 The currently implemented grammar is as follows (case sensitive):
 
@@ -27,11 +31,11 @@ The data model for the example queries is roughly something like this:
 HBase table named `customer` with a single column family: `d`.  The row key is a synthetic primary key for a customer.
 Columns include:
 
-* address: multiple versions to track a customer moving
-* clicks: time series of clicks the customer has made on a website
-* predictions: an expandable column prefix that results in multiple columns, kind of like a map
+  * address: multiple versions to track a customer moving
+  * clicks: time series of clicks the customer has made on a website
+  * predictions: an expandable column prefix that results in multiple columns, kind of like a map
 
-## Example Queries
+### Example Queries
 
     scan d:address,
          all versions of d:clicks between {start} and {stop}
@@ -62,7 +66,7 @@ Fetch all customers between IDs 50 and 100, inclusive at the beginning, exclusiv
 
     scan * from customer where rowkey between 50 and 100
 
-## Example Usage
+### Example Usage
 
     QueryPlanner planner = new QueryPlanner(new HTablePool(HBaseConfiguration.create()));
     Query query = planner.parse("scan from customer where rowkey = {id}");
