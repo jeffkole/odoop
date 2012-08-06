@@ -1,0 +1,8 @@
+com.opower.common.reflect
+com.opower.hadoop.fs
+com.opower.hadoop.hbase.filter
+com.opower.hadoop.hbase.filter.example
+com.opower.hadoop.hbase.query
+com.opower.hadoop.hbase.query.example
+com.opower.hadoop.hbase.selector
+com.opower.hadoop.hbase.test
