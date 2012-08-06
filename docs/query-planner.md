@@ -1,8 +1,7 @@
 ---
+layout: default
 title: Query Planner
 ---
-
-# {{ page.title }}
 
 ### Query Grammar
 

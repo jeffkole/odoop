@@ -1,14 +1,12 @@
 ---
+layout: default
 title: Release Notes
 ---
-
-# {{ page.title }}
 
 ### 0.0.2
 
 This development release adds a query planning engine that can be used to
-run SQL-like queries against HBase.  The documentation is in
-`hbase-filters/docs/query-planner.md`.
+run SQL-like queries against HBase.
 
 * Query planner functionality
 
