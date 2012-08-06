@@ -31,9 +31,9 @@ The data model for the example queries is roughly something like this:
 HBase table named `customer` with a single column family: `d`.  The row key is a synthetic primary key for a customer.
 Columns include:
 
-  * address: multiple versions to track a customer moving
-  * clicks: time series of clicks the customer has made on a website
-  * predictions: an expandable column prefix that results in multiple columns, kind of like a map
+* address: multiple versions to track a customer moving
+* clicks: time series of clicks the customer has made on a website
+* predictions: an expandable column prefix that results in multiple columns, kind of like a map
 
 ### Example Queries
 

@@ -10,9 +10,9 @@ within the Hadoop eco-system easier.
 
 ### Documentation
 
-  * [Release Notes](RELEASE_NOTES.html)
-  * [Query Planner](docs/query-planner.html)
-  * [API documents](docs/api/index.html)
+* [Release Notes](RELEASE_NOTES.html)
+* [Query Planner](docs/query-planner.html)
+* [API documents](docs/api/index.html)
 
 ### Installation
 
