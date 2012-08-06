@@ -3,6 +3,10 @@ layout: doc
 title: Query Planner
 ---
 
+The query planner is a system for running SQL-like queries against HBase.  It is not intended as a complete implementation
+of SQL on top of HBase, but it is instead designed to be specific to HBase and thus uses its semantics.  The current
+implementation is heavily biased towards helping run complex scans on wide tables.
+
 ### Query Grammar
 
 The currently implemented grammar is as follows (case sensitive):
@@ -30,16 +34,21 @@ The data model for the example queries is roughly something like this:
 HBase table named `customer` with a single column family: `d`.  The row key is a synthetic primary key for a customer.
 Columns include:
 
-* address: multiple versions to track a customer moving
-* clicks: time series of clicks the customer has made on a website
-* predictions: an expandable column prefix that results in multiple columns, kind of like a map
+* `address`: multiple versions to track a customer moving
+* `clicks`: time series of clicks the customer has made on a website
+* `predictions`: an expandable column prefix that results in multiple columns, kind of like a map
 
 ### Example Queries
+
+Fetch the most recent address and all clicks that occurred between `start` and `stop` for a single row:
 
     scan d:address,
          all versions of d:clicks between {start} and {stop}
     from customer
     where rowkey = {id}
+
+Notice that the parameters of the query must be abstracted out.  Literal values are not allowed.  Instead all parameters
+must be demarcated with `{` and `}` and then set according to the parameter name.
 
 Additional query functionality can include pattern matching at the column level like the following.
 
@@ -52,10 +61,9 @@ Fetch the most recent version of all predictions:
     scan d:preditions* ...
 
 Additional constraints can be added to the where clause as well.  This example shows a literal parameter value just
-for ease of understanding.  Literal values are not allowed; all parameters must be demarcated with `{` and `}` and then
-set according to the parameter name.
+for ease of understanding.
 
-Assuming a click is deserialized as `<target URL>|<referrer URL>`, fetch all clicks coming from http://google.com:
+Assuming a click is deserialized as `<target URL>|<referrer URL>`, fetch all clicks coming from `http://google.com`:
 
     scan all versions of d:clicks
     from customer

@@ -18,3 +18,4 @@ functionality:
 * DeployedFilter functionality
 * Selector abstraction
 * RowKeyInSetSelector functionality
+* HBaseTestRunner JUnit runner to manage MiniHBaseCluster lifecycle
