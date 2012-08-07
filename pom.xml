@@ -6,9 +6,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <groupId>com.opower</groupId>
+    <groupId>com.opower.odoop</groupId>
     <artifactId>odoop</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.3-SNAPSHOT</version>
 
     <name>Opower Hadoop Help</name>
     <description>A set of libraries to help use Hadoop</description>

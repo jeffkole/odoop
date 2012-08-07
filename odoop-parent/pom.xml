@@ -8,9 +8,9 @@
     </properties>
 
     <parent>
-        <groupId>com.opower</groupId>
+        <groupId>com.opower.odoop</groupId>
         <artifactId>odoop</artifactId>
-        <version>0.0.2-SNAPSHOT</version>
+        <version>0.0.3-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
 
