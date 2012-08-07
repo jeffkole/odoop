@@ -3,6 +3,8 @@ layout: main
 title: Release Notes
 ---
 
+Odoop complies with [semantic versioning](http://semver.org).
+
 ### 0.0.2
 
 This development release adds a query planning engine that can be used to

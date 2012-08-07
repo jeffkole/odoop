@@ -6,11 +6,24 @@ title: Welcome
 Welcome to Odoop, a collection of libraries built by [Opower](http://opower.com) to make working
 within the Hadoop ecosystem easier.
 
-### Documentation
+### Features
+
+* [Query Planner](docs/query-planner.html)
+* [Deployed Filter](docs/deployed-filter.html)
+
+#### Documentation
 
 * [Release Notes](RELEASE_NOTES.html)
-* [Query Planner](docs/query-planner.html)
 * [API documents](docs/api/index.html)
+
+### Requirements
+
+Odoop is built and tested using the following technologies:
+
+* Java 1.6.0_33
+* Scala 2.9.1
+* HBase 0.90.6-cdh3u4
+* Hadoop 0.20.2-cdh3u4
 
 ### Building & Usage
 
@@ -31,6 +44,8 @@ The other jars can be used through standard Maven dependency management:
       <artifact>odoop-test</artifact>
       <scope>test</scope>
     </dependency>
+
+Odoop complies with [semantic versioning](http://semver.org).
 
 ### Contributors
 
