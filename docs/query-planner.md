@@ -76,14 +76,20 @@ Fetch all customers between IDs 50 and 100, inclusive at the beginning, exclusiv
 ### Example Usage
 
     QueryPlanner planner = new QueryPlanner(new HTablePool(HBaseConfiguration.create()));
-    Query query = planner.parse("scan from customer where rowkey = {id}");
-    query.setInt("id", 42);
-    ResultScanner scanner = query.scan();
-    for (Result result : scanner) {
-        // do some real work
+    Query query = null;
+    ResultScanner scanner = null;
+    try {
+        query = planner.parse("scan from customer where rowkey = {id}");
+        query.setInt("id", 42);
+        scanner = query.scan();
+        for (Result result : scanner) {
+            // do some real work
+        }
     }
-    scanner.close();
-    query.close();
-    planner.close();
+    finally {
+        closeQuietly(scanner);
+        closeQuietly(query);
+        closeQuietly(planner);
+    }
 
 The QueryPlanner is fully responsible for constructing an efficient Scan and managing the HTable and its connections.
