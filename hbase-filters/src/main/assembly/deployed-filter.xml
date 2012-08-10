@@ -14,11 +14,11 @@
             <outputDirectory></outputDirectory>
             <unpack>true</unpack>
             <!--
-                 Only include com.opower dependencies, as all others
-                 must be provided in the cluster already.
+                 Only include dependencies from this project group,
+                 as all others must be provided in the cluster already.
             -->
             <includes>
-                <include>com.opower:*</include>
+                <include>${project.groupId}:*</include>
             </includes>
         </dependencySet>
     </dependencySets>
