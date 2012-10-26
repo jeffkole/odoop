@@ -15,6 +15,7 @@ within the Hadoop ecosystem easier.
 
 * [Release Notes](RELEASE_NOTES.html)
 * [API documents](docs/api/index.html)
+* [Roadmap](roadmap.html)
 
 ### Requirements
 
