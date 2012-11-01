@@ -88,22 +88,31 @@ public class RowKeyInSetSelector extends AbstractRowSelector {
         // bloom filter on the server
         this.bloomFilter.getMetaWriter().write(out);
         // Now write out the actual bloom filter bytes
-        out.writeInt(this.bloomFilter.getByteSize());
+        // The size is stored as a long but is documented to be required to fit
+        // in the space of an int and is cast to an int before allocating the
+        // internal byte buffer.
+        out.writeInt((int)this.bloomFilter.getByteSize());
         this.bloomFilter.getDataWriter().write(out);
     }
 
     public void readFields(DataInput in) throws IOException {
-        int bytesPerInt = 4;
-        int numIntsInMeta = 5;
-        byte[] metaBytes = new byte[bytesPerInt * numIntsInMeta];
-        in.readFully(metaBytes);
+        // The MetaWriter writes out VERSION, byteSize, hashCount, hashType, and
+        // keyCount.  The constructor to ByteBloomFilter reads in byteSize,
+        // hashCount, hashType, and keyCount.  So before constructing the
+        // ByteBloomFilter, read in the version int.
+        int version = in.readInt();
+        if (version != ByteBloomFilter.VERSION) {
+            throw new IllegalArgumentException("Wrong version of ByteBloomFilter. Expected " +
+                    ByteBloomFilter.VERSION + "; found " + version);
+        }
+        // Create the bloom filter using the meta data
+        this.bloomFilter = new ByteBloomFilter(in);
+        // allocate the buffer to make sure we can actually use it
+        this.bloomFilter.allocBloom();
+
         int numBytesInData = in.readInt();
         byte[] rawBloom = new byte[numBytesInData];
         in.readFully(rawBloom);
-
-        this.bloomFilter = new ByteBloomFilter(ByteBuffer.wrap(metaBytes));
-        // allocate the buffer to make sure we can actually use it
-        this.bloomFilter.allocBloom();
         this.bloomBits = ByteBuffer.wrap(rawBloom);
 
         outputStats(this.bloomFilter);

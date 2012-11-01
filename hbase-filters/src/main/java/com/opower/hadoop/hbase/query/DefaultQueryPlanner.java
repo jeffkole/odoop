@@ -71,7 +71,7 @@ public class DefaultQueryPlanner implements QueryPlanner {
      *
      * @param table the table to return to the pool
      */
-    void putTable(HTableInterface table) {
+    void putTable(HTableInterface table) throws IOException {
         if (LOG.isTraceEnabled()) {
             LOG.trace(String.format("Returning table to pool %s", table));
         }

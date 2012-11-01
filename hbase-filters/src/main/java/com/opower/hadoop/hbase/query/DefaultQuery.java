@@ -35,7 +35,7 @@ public class DefaultQuery implements Query {
         this.queryBuilder = queryBuilder;
     }
 
-    public void close() {
+    public void close() throws IOException {
         if (this.hTable != null) {
             this.queryPlanner.putTable(this.hTable);
         }

@@ -29,6 +29,13 @@
             <artifactId>hbase</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- HBase no longer depends explicitly on hadoop-common, but it
+             definitely needs the classes in there (specifically Writable) -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
@@ -59,7 +66,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
+            <artifactId>hadoop-minicluster</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

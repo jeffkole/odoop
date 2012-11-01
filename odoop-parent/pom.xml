@@ -3,8 +3,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <hbase.version>0.90.6-cdh3u4</hbase.version>
-        <hadoop.version>0.20.2-cdh3u4</hadoop.version>
+        <hbase.version>0.92.1-cdh4.1.1</hbase.version>
+        <hadoop.version>2.0.0-cdh4.1.1</hadoop.version>
     </properties>
 
     <parent>
@@ -124,7 +124,7 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-core</artifactId>
+                <artifactId>hadoop-common</artifactId>
                 <version>${hadoop.version}</version>
             </dependency>
             <dependency>
@@ -134,7 +134,7 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-test</artifactId>
+                <artifactId>hadoop-minicluster</artifactId>
                 <version>${hadoop.version}</version>
                 <scope>test</scope>
             </dependency>

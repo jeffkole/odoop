@@ -66,6 +66,10 @@ public class DeployedFilter implements Filter {
         return this.wrappedFilter.filterKeyValue(v);
     }
 
+    public KeyValue transform(KeyValue v) {
+        return this.wrappedFilter.transform(v);
+    }
+
     public void filterRow(List<KeyValue> kvs) {
         this.wrappedFilter.filterRow(kvs);
     }

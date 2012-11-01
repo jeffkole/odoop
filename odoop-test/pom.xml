@@ -29,7 +29,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-test</artifactId>
+            <artifactId>hadoop-minicluster</artifactId>
             <scope>compile</scope>
         </dependency>
         <!-- And oddly, the dependencies typically needed in the compile scope are actually needed in test -->
