@@ -23,8 +23,8 @@ Odoop is built and tested using the following technologies:
 
 * Java 1.6.0_33
 * Scala 2.9.1
-* HBase 0.90.6-cdh3u4
-* Hadoop 0.20.2-cdh3u4
+* HBase 0.92.1-cdh4.1.1
+* Hadoop 2.0.0-cdh4.1.1
 
 ### Building & Usage
 
