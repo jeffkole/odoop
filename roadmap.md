@@ -12,7 +12,7 @@ Potential features and improvements include in no particular order
 * Migrate `HBaseTemplate` from internal library
 * Add `hbase shell` support for query planner
 * Add column constraints and boolean logic
-* Skip ScalaObject along with hbase-filters
+* Ship ScalaObject along with hbase-filters
 * Add unit tests to ensure garbage collection of deployed filters
 * Add ability to register multiple filter classes with `DeployedFilterManager`
   and clean up at client shutdown
