@@ -7,7 +7,8 @@ Odoop complies with [semantic versioning](http://semver.org).
 
 ### 0.0.3
 
-Changes the Maven groupId to `com.opower.odoop`.
+* Changes the Maven groupId to `com.opower.odoop`
+* Upgrades to CDH4
 
 ### 0.0.2
 
