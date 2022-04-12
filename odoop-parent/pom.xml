@@ -4,7 +4,7 @@
 
     <properties>
         <hbase.version>0.92.1-cdh4.1.1</hbase.version>
-        <hadoop.version>2.0.0-cdh4.1.1</hadoop.version>
+        <hadoop.version>3.2.3</hadoop.version>
     </properties>
 
     <parent>
